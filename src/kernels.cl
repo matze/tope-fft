@@ -8,9 +8,163 @@ __kernel void twid1D(__global double *twiddle, int size)
 	twiddle[2*idX+1] = -sin(2.*CLPI*idX/size);
 }
 
+__kernel void DIT4C2C(	__global double *data, 
+						__global double *twiddle,
+						const int size, unsigned int stage ) 
+{
+
+	int idX = get_global_id(0);
+	
+	double CLPI = acos(-1.);
+
+	int powMaxLvl = 11;
+	int powLevels = stage / powMaxLvl;
+	int powRemain = stage % powMaxLvl;
+	int powX = 1;
+	int powXm1 = 1;
+	int x;
+	for (x = 0; x < powLevels; x++) {
+		powX *= pow(4.0f,powMaxLvl);
+	}
+	powX *= pow(4.0f,powRemain);
+	powXm1 = powX/4;
+
+	int clipOne, clipTwo, clipThr, clipFou;
+	int yIndex, kIndex;
+	yIndex = idX / powXm1;
+	kIndex = idX % powXm1;
+	
+	clipOne 	= 2 * (kIndex + yIndex * powX + 0 * powXm1);
+	clipTwo 	= 2 * (kIndex + yIndex * powX + 1 * powXm1);
+	clipThr		= 2 * (kIndex + yIndex * powX + 2 * powXm1);
+	clipFou		= 2 * (kIndex + yIndex * powX + 3 * powXm1);
+
+	double2 TEMPC;
+	double8 dataLOC = (double8)(	data[clipOne+0],data[clipOne+1],
+									data[clipTwo+0],data[clipTwo+1],
+									data[clipThr+0],data[clipThr+1],
+									data[clipFou+0],data[clipFou+1]	);
+
+	int coeffUse = kIndex * size / powX;	
+	int red = size/4;
+	double2 clSet1;
+	int quad = coeffUse/red;
+	int buad = coeffUse%red;
+	if (quad == 0) {
+		clSet1.x = twiddle[2*coeffUse];
+		clSet1.y = twiddle[2*coeffUse+1];
+	}
+	else if (quad == 1) {
+		clSet1.x = twiddle[2*buad+1];
+		clSet1.y = -twiddle[2*buad];
+	}
+	else if (quad == 2) {
+		clSet1.x = -twiddle[2*buad];
+		clSet1.y = -twiddle[2*buad+1];
+	}
+	double2 clSet2;
+	quad = (2*coeffUse)/red;
+	buad = (2*coeffUse)%red;
+	if (quad == 0) {
+		clSet2.x = twiddle[2*2*coeffUse];
+		clSet2.y = twiddle[2*2*coeffUse+1];
+	}
+	else if (quad == 1) {
+		clSet2.x = twiddle[2*buad+1];
+		clSet2.y = -twiddle[2*buad];
+	}
+	else if (quad == 2) {
+		clSet2.x = -twiddle[2*buad];
+		clSet2.y = -twiddle[2*buad+1];
+	}
+	double2 clSet3;
+	quad = (3*coeffUse)/red;
+	buad = (3*coeffUse)%red;
+	if (quad == 0) {
+		clSet3.x = twiddle[2*3*coeffUse];
+		clSet3.y = twiddle[2*3*coeffUse+1];
+	}
+	else if (quad == 1) {
+		clSet3.x = twiddle[2*buad+1];
+		clSet3.y = -twiddle[2*buad];
+	}
+	else if (quad == 2) {
+		clSet3.x = -twiddle[2*buad];
+		clSet3.y = -twiddle[2*buad+1];
+	}
+
+	#if 1
+		TEMPC.x = dataLOC.s2 * clSet2.x - dataLOC.s3 * clSet2.y;
+		TEMPC.y = dataLOC.s3 * clSet2.x + dataLOC.s2 * clSet2.y;
+		dataLOC.s2 = TEMPC.x;
+		dataLOC.s3 = TEMPC.y;
+		
+		TEMPC.x = dataLOC.s4 * clSet1.x - dataLOC.s5 * clSet1.y;
+		TEMPC.y = dataLOC.s5 * clSet1.x + dataLOC.s4 * clSet1.y;
+		dataLOC.s4 = TEMPC.x;
+		dataLOC.s5 = TEMPC.y;
+
+		TEMPC.x = dataLOC.s6 * clSet3.x - dataLOC.s7 * clSet3.y;
+		TEMPC.y = dataLOC.s7 * clSet3.x + dataLOC.s6 * clSet3.y;
+		dataLOC.s6 = TEMPC.x;
+		dataLOC.s7 = TEMPC.y;
+	#endif
+
+	#if 0
+	if (kIndex != 0) {
+		clSet2.x = cos(two*two*CLPI*kIndex/powX);
+		clSet2.y = mone*sin(two*two*CLPI*kIndex/powX);
+		TEMPC.x = dataLOC.s2 * clSet2.x - dataLOC.s3 * clSet2.y;
+		TEMPC.y = dataLOC.s3 * clSet2.x + dataLOC.s2 * clSet2.y;
+		dataLOC.s2 = TEMPC.x;
+		dataLOC.s3 = TEMPC.y;
+		clSet1.x = cos(two*CLPI*kIndex/powX);
+		clSet1.y = mone*sin(two*CLPI*kIndex/powX);
+		TEMPC.x = dataLOC.s4 * clSet1.x - dataLOC.s5 * clSet1.y;
+		TEMPC.y = dataLOC.s5 * clSet1.x + dataLOC.s4 * clSet1.y;
+		dataLOC.s4 = TEMPC.x;
+		dataLOC.s5 = TEMPC.y;
+		clSet3.x = cos(3.0f*two*CLPI*kIndex/powX);
+		clSet3.y = mone*sin(3.0f*two*CLPI*kIndex/powX);
+		TEMPC.x = dataLOC.s6 * clSet3.x - dataLOC.s7 * clSet3.y;
+		TEMPC.y = dataLOC.s7 * clSet3.x + dataLOC.s6 * clSet3.y;
+		dataLOC.s6 = TEMPC.x;
+		dataLOC.s7 = TEMPC.y;
+	}	
+	#endif
+
+	data[clipOne+0] = dataLOC.s0 + dataLOC.s2 + dataLOC.s4 + dataLOC.s6;
+	data[clipOne+1] = dataLOC.s1 + dataLOC.s3 + dataLOC.s5 + dataLOC.s7;
+	data[clipTwo+0] = dataLOC.s0 - dataLOC.s2 + dataLOC.s5 - dataLOC.s7;
+	data[clipTwo+1] = dataLOC.s1 - dataLOC.s3 - dataLOC.s4 + dataLOC.s6;
+	data[clipThr+0] = dataLOC.s0 + dataLOC.s2 - dataLOC.s4 - dataLOC.s6;
+	data[clipThr+1] = dataLOC.s1 + dataLOC.s3 - dataLOC.s5 - dataLOC.s7;
+	data[clipFou+0] = dataLOC.s0 - dataLOC.s2 - dataLOC.s5 + dataLOC.s7;
+	data[clipFou+1] = dataLOC.s1 - dataLOC.s3 + dataLOC.s4 - dataLOC.s6;
+	#if 0
+	data[clipOne+0] = 0;//
+	data[clipOne+1] = 0;
+	data[clipTwo+0] = clSet2.x;
+	data[clipTwo+1] = clSet2.y;
+	data[clipThr+0] = clSet1.x;
+	data[clipThr+1] = clSet1.y;
+	data[clipFou+0] = clSet3.x;
+	data[clipFou+1] = clSet3.y;
+	#endif
+
+
+
+
+}
+
+
+
+
+
+
 __kernel void DIT2C2C(	__global double *data, 
-							__global double *twiddle,
-							const int size, unsigned int stage ) 
+						__global double *twiddle,
+						const int size, unsigned int stage ) 
 {
 	#if 1
 	int idX = get_global_id(0);

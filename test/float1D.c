@@ -12,14 +12,14 @@
 
 int main()
 {
-	int N = 16;
+	int N = 64;
 	
 	double *data = calloc(N*2,sizeof(double));
 
 	double PI = acos(-1);
 	int i;
 	for (i = 0; i < N; i++) {
-		data[2*i] = sin(2*PI*i/N);
+		data[2*i] = i+1;//sin(2*PI*i/N);
 	}
 
 	#if 1 /* Tope FFT Starts */
@@ -30,7 +30,7 @@ int main()
 	tope1DPlanInit(&framework, &plan, N, C2C, data);
 	tope1DExec(&framework, &plan, data, FORWARD);
 
-	#if 0
+	#if 1
 	for (i = 0; i < N; i++) {
 		printf("%lf:%lf\n", data[2*i], data[2*i+1]);
 	}
@@ -43,7 +43,7 @@ int main()
 	in = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*N);
 	out = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*N);
 	for (i = 0; i < N; i++) {
-		in[i][0] = sin(2*PI*i/N);
+		in[i][0] = i+1;//sin(2*PI*i/N);
 		in[i][1] = 0;
 	}
 	fftw_plan p = fftw_plan_dft_1d(N, in, out, FFTW_FORWARD, FFTW_ESTIMATE);

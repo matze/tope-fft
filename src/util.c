@@ -77,8 +77,23 @@ void tope1DExec(	struct topeFFT *f,
 	#endif
 
 	/* Run Butterflies */
-	t->globalSize[0] = (t->x)/2;
-	t->localSize[0] = ((t->x)/2) < 128 ? (t->x)/2 : 128;
+	if(t->radix==8) {
+		t->globalSize[0] = (t->x)/8;
+		t->localSize[0] = ((t->x)/8) < 128 ? (t->x)/8 : 128;
+	}
+	else {
+		if(t->radix==4) {
+			t->globalSize[0] = (t->x)/4;
+			t->localSize[0] = ((t->x)/4) < 128 ? (t->x)/4 : 128;
+		}
+		else { 
+			if(t->radix==2){
+				t->globalSize[0] = (t->x)/2;
+				t->localSize[0] = ((t->x)/2) < 128 ? (t->x)/2 : 128;
+			}
+		}
+	}
+
 	int x;
 	for (x = 1; x <= t->log; x++) {
 		f->error = clSetKernelArg(t->kernel, 3, sizeof(int), (void*)&x);
@@ -90,6 +105,17 @@ void tope1DExec(	struct topeFFT *f,
 		$CHECKERROR
 		clFinish(f->command_queue);
 		t->totalKernel += profileThis(f->event);
+
+		#if 0 // Debug Code
+			int i;
+			f->error = clEnqueueReadBuffer(	f->command_queue, t->data,
+										CL_TRUE, 0, t->dataSize, d, 
+										0, NULL, &f->event);
+			$CHECKERROR
+			for (i = 0; i < t->x; i++) {
+				printf("%lf:%lf\n", d[2*i], d[2*i+1]);
+			}
+		#endif
 	}
 
 	/* Read Data Again */
@@ -126,7 +152,7 @@ void tope1DPlanInit(struct topeFFT *f,
 	}
 	if (t->radix == -1) {
 		printf("No algorithm for this input size\n");
-		exit(0);
+	 	exit(0);
 	}
 	
 
@@ -175,6 +201,9 @@ void tope1DPlanInit(struct topeFFT *f,
 				break;
 		case 4:	t->kernel = clCreateKernel(f->program, "DIT4C2C", &f->error);
 				break;
+		case 8:	t->kernel = clCreateKernel(f->program, "DIT8C2C", &f->error);
+				break;
+
 
 	}
 	f->error = clSetKernelArg(t->kernel, 0, sizeof(cl_mem), (void*)&t->data);
@@ -207,6 +236,8 @@ void tope1DPlanInit(struct topeFFT *f,
 	$CHECKERROR
 	clFinish(f->command_queue);
 	t->totalMemory += profileThis(f->event);
+	if(t->radix==8)
+		t->log=t->log/3;
 	if(t->radix==4)
 		t->log=t->log/2;
 }

@@ -29,6 +29,7 @@ void plotInGnuplot(double *d, fftw_complex *o, int n) {
 	#endif
 	#if 1
 	for (i = 0; i < n; i++) { 
+
 		fprintf(temp, "%d\t%lf\t%lf\n", 
 						i, 
 						pow(pow(d[2*i],2)+pow(d[2*i+1],2),0.5),
@@ -292,7 +293,7 @@ void topeFFTInit(struct topeFFT *f)
 	FILE *fp; 
 	char *source_str;
 	size_t source_size;
-	char fileName[] = "src/kernels.cl";
+	char fileName[] = "/opt/topefft/kernels.cl";
 	fp = fopen(fileName, "r");
 	if (!fp) {
 		fprintf(stderr, "Failed to load kernels. Check path.\n");

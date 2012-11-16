@@ -17,7 +17,7 @@ tests:
 install:
 	mkdir -p /opt/topefft
 	cp src/kernels.cl /opt/topefft
-	cp lib/libTopeFFT.so.1.0 /opt/topefft/libTopeFFT.so.1.0
+	mv lib/libTopeFFT.so.1.0 /opt/topefft/libTopeFFT.so.1.0
 	ln -sf /opt/topefft/libTopeFFT.so.1.0 /opt/topefft/libTopeFFT.so.1
 	ln -sf /opt/topefft/libTopeFFT.so.1.0 /opt/topefft/libTopeFFT.so
 
@@ -28,3 +28,4 @@ clean:
 	@rm -f .sw*
 	@rm -f .*sw*
 	@rm -f src/.sw*
+

@@ -10,7 +10,8 @@ __kernel void twid1D(__global double *twiddle, int size)
 
 __kernel void DIT4C2C(	__global double *data, 
 						__global double *twiddle,
-						const int size, unsigned int stage ) 
+						const int size, unsigned int stage,
+						unsigned int dir ) 
 {
 
 	int idX = get_global_id(0);
@@ -112,6 +113,12 @@ __kernel void DIT4C2C(	__global double *data,
 		clSet3.y =  twiddle[2*buad];
 	}
 
+	if (dir == 0) {
+		clSet1.y *= -1;
+		clSet2.y *= -1;
+		clSet3.y *= -1;
+	}
+
 	#if 1
 		TEMPC.x = SIGA.s2 * clSet2.x - SIGA.s3 * clSet2.y;
 		TEMPC.y = SIGA.s3 * clSet2.x + SIGA.s2 * clSet2.y;
@@ -152,14 +159,26 @@ __kernel void DIT4C2C(	__global double *data,
 	}	
 	#endif
 
-	data[clipOne+0] = SIGA.s0 + SIGA.s2 + SIGA.s4 + SIGA.s6;
-	data[clipOne+1] = SIGA.s1 + SIGA.s3 + SIGA.s5 + SIGA.s7;
-	data[clipTwo+0] = SIGA.s0 - SIGA.s2 + SIGA.s5 - SIGA.s7;
-	data[clipTwo+1] = SIGA.s1 - SIGA.s3 - SIGA.s4 + SIGA.s6;
-	data[clipThr+0] = SIGA.s0 + SIGA.s2 - SIGA.s4 - SIGA.s6;
-	data[clipThr+1] = SIGA.s1 + SIGA.s3 - SIGA.s5 - SIGA.s7;
-	data[clipFou+0] = SIGA.s0 - SIGA.s2 - SIGA.s5 + SIGA.s7;
-	data[clipFou+1] = SIGA.s1 - SIGA.s3 + SIGA.s4 - SIGA.s6;
+	if (dir == 1) {
+		data[clipOne+0] = SIGA.s0 + SIGA.s2 + SIGA.s4 + SIGA.s6;
+		data[clipOne+1] = SIGA.s1 + SIGA.s3 + SIGA.s5 + SIGA.s7;
+		data[clipTwo+0] = SIGA.s0 - SIGA.s2 + SIGA.s5 - SIGA.s7;
+		data[clipTwo+1] = SIGA.s1 - SIGA.s3 - SIGA.s4 + SIGA.s6;
+		data[clipThr+0] = SIGA.s0 + SIGA.s2 - SIGA.s4 - SIGA.s6;
+		data[clipThr+1] = SIGA.s1 + SIGA.s3 - SIGA.s5 - SIGA.s7;
+		data[clipFou+0] = SIGA.s0 - SIGA.s2 - SIGA.s5 + SIGA.s7;
+		data[clipFou+1] = SIGA.s1 - SIGA.s3 + SIGA.s4 - SIGA.s6;
+	}
+	else if (dir == 0) {
+		data[clipOne+0] = SIGA.s0 + SIGA.s2 + SIGA.s4 + SIGA.s6;
+		data[clipOne+1] = SIGA.s1 + SIGA.s3 + SIGA.s5 + SIGA.s7;
+		data[clipTwo+0] = SIGA.s0 - SIGA.s2 - SIGA.s5 + SIGA.s7;
+		data[clipTwo+1] = SIGA.s1 - SIGA.s3 + SIGA.s4 - SIGA.s6;
+		data[clipThr+0] = SIGA.s0 + SIGA.s2 - SIGA.s4 - SIGA.s6;
+		data[clipThr+1] = SIGA.s1 + SIGA.s3 - SIGA.s5 - SIGA.s7;
+		data[clipFou+0] = SIGA.s0 - SIGA.s2 + SIGA.s5 - SIGA.s7;
+		data[clipFou+1] = SIGA.s1 - SIGA.s3 - SIGA.s4 + SIGA.s6;
+	}
 	#if 0
 	data[clipOne+0] = 0;//
 	data[clipOne+1] = 0;
@@ -174,7 +193,8 @@ __kernel void DIT4C2C(	__global double *data,
 
 __kernel void DIT8C2C(	__global double *data, 
 						__global double *twiddle,
-						const int size, unsigned int stage ) 
+						const int size, unsigned int stage,
+						unsigned int dir ) 
 {
 	int idX = get_global_id(0);
 	double two = 2.0;
@@ -334,6 +354,16 @@ __kernel void DIT8C2C(	__global double *data,
 		clSet7.y =  twiddle[2*buad];
 	}
 
+	if (dir == 0) {
+		clSet1.y *= -1;
+		clSet2.y *= -1;
+		clSet3.y *= -1;
+		clSet4.y *= -1;
+		clSet5.y *= -1;
+		clSet6.y *= -1;
+		clSet7.y *= -1;
+	}
+
 	if (kIndex != 0) {
 		TMP.x = SIGA.s2 * clSet4.x - SIGA.s3 * clSet4.y;
 		TMP.y = SIGA.s2 * clSet4.y + SIGA.s3 * clSet4.x;
@@ -391,13 +421,24 @@ __kernel void DIT8C2C(	__global double *data,
 								SIGA.sc - SIGA.se,
 								SIGA.sd - SIGA.sf);
 
-	tmp = (SIGB.sa + SIGB.sb) * d707;
-	SIGB.sb = (SIGB.sb - SIGB.sa) * d707;
-	SIGB.sa = tmp;
-	tmp = (SIGB.sf - SIGB.se) * d707;
-	SIGB.sf = (SIGB.sf + SIGB.se) * -d707;
-	SIGB.se = tmp;
-	tmp = SIGB.s7; SIGB.s7 = -SIGB.s6; SIGB.s6 = tmp;
+	if (dir == 1) {
+		tmp 	= (SIGB.sa + SIGB.sb) * d707;
+		SIGB.sb = (SIGB.sb - SIGB.sa) * d707;
+		SIGB.sa = tmp;	
+		tmp 	= (SIGB.sf - SIGB.se) * d707;
+		SIGB.sf = (SIGB.sf + SIGB.se) * -d707;
+		SIGB.se = tmp;
+		tmp 	= SIGB.s7; SIGB.s7 = -SIGB.s6; SIGB.s6 = tmp; 
+	}
+	else if (dir == 0) {
+		tmp 	= (SIGB.sa - SIGB.sb) * d707;
+		SIGB.sb = (SIGB.sb + SIGB.sa) * d707;
+		SIGB.sa = tmp;
+		tmp 	= (SIGB.sf + SIGB.se) * -d707;
+		SIGB.sf = (SIGB.se - SIGB.sf) * d707;
+		SIGB.se = tmp;
+		tmp 	= -SIGB.s7; SIGB.s7 = SIGB.s6; SIGB.s6 = tmp;
+	}
 
 	SIGA.s0 = SIGB.s0 + SIGB.s4;
 	SIGA.s1 = SIGB.s1 + SIGB.s5;
@@ -411,10 +452,18 @@ __kernel void DIT8C2C(	__global double *data,
 	SIGA.s9 = SIGB.s9 + SIGB.sd;
 	SIGA.sa = SIGB.sa + SIGB.se;
 	SIGA.sb = SIGB.sb + SIGB.sf;
-	SIGA.sc = SIGB.s9 - SIGB.sd;
-	SIGA.sd = SIGB.sc - SIGB.s8;
-	SIGA.se = SIGB.sb - SIGB.sf;
-	SIGA.sf = SIGB.se - SIGB.sa;
+	if (dir == 1) {
+		SIGA.sc = SIGB.s9 - SIGB.sd;
+		SIGA.sd = SIGB.sc - SIGB.s8;
+		SIGA.se = SIGB.sb - SIGB.sf;
+		SIGA.sf = SIGB.se - SIGB.sa;
+	}
+	else if (dir == 0) {
+		SIGA.sc = SIGB.sd - SIGB.s9;
+		SIGA.sd = SIGB.s8 - SIGB.sc;
+		SIGA.se = SIGB.sf - SIGB.sb;
+		SIGA.sf = SIGB.sa - SIGB.se;
+	}
 
 	#if 1
 	data[clipOne+0] = SIGA.s0 + SIGA.s8;
@@ -456,7 +505,8 @@ __kernel void DIT8C2C(	__global double *data,
 
 __kernel void DIT2C2C(	__global double *data, 
 						__global double *twiddle,
-						const int size, unsigned int stage ) 
+						const int size, unsigned int stage,
+						unsigned int dir ) 
 {
 	#if 1
 	int idX = get_global_id(0);
@@ -503,6 +553,8 @@ __kernel void DIT2C2C(	__global double *data,
 		CLCOSSIN.y = -twiddle[2*buad+1];
 	}
 
+	if (dir == 0) CLCOSSIN.y *= -1;
+
 	double4 LOC = (double4)(	data[clipStart],data[clipStart+1],
 								data[clipEnd],	data[clipEnd+1]);
 	double4 FIN = (double4)(	LOC.x + LOC.z * CLCOSSIN.x - LOC.w * CLCOSSIN.y,
@@ -510,13 +562,13 @@ __kernel void DIT2C2C(	__global double *data,
 								LOC.x - LOC.z * CLCOSSIN.x + LOC.w * CLCOSSIN.y,
 								LOC.y - LOC.w * CLCOSSIN.x - LOC.z * CLCOSSIN.y);
 
-	#if 1
+	#if 1	// Right
 	data[clipStart] 	= FIN.x;
 	data[clipStart+1] 	= FIN.y;
 	data[clipEnd] 		= FIN.z;
 	data[clipEnd+1] 	= FIN.w;
 	#endif
-	#if 0
+	#if 0	// Debug
 	if (quad == 0) {
 		[2*idX] = cos(two*CLPI*(coeffUse)/xR);
 		[2*idX+1] = -sin(two*CLPI*(coeffUse)/xR);
@@ -531,6 +583,12 @@ __kernel void DIT2C2C(	__global double *data,
 	}
 	#endif
 	#endif
+}
+
+__kernel void divide1D(	__global double2 *data, const int size)
+{
+	int idX = get_global_id(0);
+	data[idX] /= size;
 }
 
 __kernel void swap1D(	__global double *data, 

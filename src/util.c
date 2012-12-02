@@ -49,8 +49,16 @@ void tope1DExec(	struct topeFFT *f,
 		d[1] += d[3];
 		d[2] = hr - d[2];
 		d[3] = hi - d[3];
+		if (dir == 0) {
+			d[0] /= t->x;
+			d[2] /= t->x;
+		}
 		return;
 	}
+
+	/* Set Direction of Transform */
+	f->error = clSetKernelArg(t->kernel, 4, sizeof(int), (void*)&dir);
+	$CHECKERROR
 
 	/* Run Swapper */	
 	f->error = clSetKernelArg(t->kernel_swap,0,sizeof(cl_mem), (void*)&t->data);
@@ -118,6 +126,18 @@ void tope1DExec(	struct topeFFT *f,
 		#endif
 	}
 
+	/* Divide by N if INVERSE */
+	if (dir == 0) {
+		t->globalSize[0] = t->x;
+		t->localSize[0] = t->x < 512 ? t->x/2 : 256;
+
+		f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernel_div,
+											t->dim, NULL, t->globalSize,
+											t->localSize, 0, NULL, 
+											&f->event);
+		$CHECKERROR
+	}
+
 	/* Read Data Again */
 	f->error = clEnqueueReadBuffer(	f->command_queue, t->data,
 									CL_TRUE, 0, t->dataSize, d, 
@@ -169,6 +189,14 @@ void tope1DPlanInitBase2(	struct topeFFT *f,
 	$CHECKERROR
 	f->error = clSetKernelArg(t->kernel, 2, sizeof(int), (void*)&t->x);
 	$CHECKERROR
+
+	/* Divide Kernel for Inverse */
+	t->kernel_div = clCreateKernel( f->program, "divide1D", &f->error);
+	$CHECKERROR
+	f->error = clSetKernelArg(	t->kernel_div,0,sizeof(cl_mem),
+								(void*)&t->data); $CHECKERROR
+	f->error = clSetKernelArg(	t->kernel_div,1,sizeof(int),
+								(void*)&t->x); $CHECKERROR
 	
 	/* Bit Reversal */
 	t->kernel_bit = clCreateKernel(	f->program, "reverse2", &f->error);

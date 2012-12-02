@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
 	double PI = acos(-1);
 	int i;
 	for (i = 0; i < N; i++) {
-		data[2*i] = sin(2*PI*i/N);
+		data[2*i] = i+1;//sin(2*PI*i/N);
 	}
 
 	#if 1 /* Tope FFT Starts */
@@ -77,16 +77,26 @@ int main(int argc, char *argv[])
 	struct topePlan1D plan;
 	tope1DPlanInit(&framework, &plan, N, C2C, data);
 	tope1DExec(&framework, &plan, data, FORWARD);
-	tope1DDestroy(&framework, &plan);
 
 	#if 0 // Show Output
 	for (i = 0; i < N; i++) {
 		printf("%lf:%lf\n", data[2*i], data[2*i+1]);
 	}
 	#endif
+
+	#if 0 // Start Inverse
+	tope1DExec(&framework, &plan, data, INVERSE);
+	#if 1 // Show Output
+	for (i = 0; i < N; i++) {
+		printf("%lf:%lf\n", data[2*i], data[2*i+1]);
+	}
+	#endif
+	#endif
+	
+	tope1DDestroy(&framework, &plan);
 	#endif
 
-	#if 1 /* FFTW Starts */
+	#if 0 /* FFTW Starts */
 	fftw_complex *in, *out;
 	in = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*N);
 	out = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*N);
@@ -111,7 +121,7 @@ int main(int argc, char *argv[])
 	#endif
 	#endif
 
-	#if 1 /* Cuda FFT Starts */
+	#if 0 /* Cuda FFT Starts */
 	float cuTime;
 	cudaEvent_t custart, custop;
 	cufftHandle cudaPlan;
@@ -143,8 +153,8 @@ int main(int argc, char *argv[])
 	#endif
 	#endif
 
-	plotInGnuplot(data, out, dataLoca, N);
-	printf("%d\t%f\t%f\t%f\t%d\n", N, ((double)1.0e-9)*(plan.totalKernel+plan.totalPreKernel), t_ns*1.0e-9, cuTime*10e-3, plan.radix);
+	//plotInGnuplot(data, out, dataLoca, N);
+	//printf("%d\t%f\t%f\t%f\t%d\n", N, ((double)1.0e-9)*(plan.totalKernel+plan.totalPreKernel), t_ns*1.0e-9, cuTime*10e-3, plan.radix);
 	return 0; 
 }
 

@@ -18,6 +18,7 @@ struct topePlan1D {
 	cl_kernel kernel_bit;	// bit reversal kernel
 	cl_kernel kernel_swap;	// swapper kernel
 	cl_kernel kernel_twid;	// twiddle calculator
+	cl_kernel kernel_div;
 	cl_mem data;			// main data
 	cl_mem bitrev;			// bitreversal data
 	cl_mem twiddle;			// twiddles

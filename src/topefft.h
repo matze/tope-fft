@@ -10,23 +10,23 @@
 #define INVERSE 0
 
 struct topePlan1D {
-	int x;
-	int log;
-	int type;
+	int x;			// Length
+	int log;		
+	int type;		// C2C, R2C, etc.
 	int radix;
-	cl_kernel kernel;
-	cl_kernel kernel_bit;
-	cl_kernel kernel_swap;
-	cl_kernel kernel_twid;
-	cl_mem data;
-	cl_mem bitrev;
-	cl_mem twiddle;
-	size_t dataSize;
-	cl_ulong totalMemory;
-	cl_ulong totalPreKernel;
-	cl_ulong totalKernel;
-	cl_uint dim;
-	size_t *globalSize;
+	cl_kernel kernel;		// butterfly kernel
+	cl_kernel kernel_bit;	// bit reversal kernel
+	cl_kernel kernel_swap;	// swapper kernel
+	cl_kernel kernel_twid;	// twiddle calculator
+	cl_mem data;			// main data
+	cl_mem bitrev;			// bitreversal data
+	cl_mem twiddle;			// twiddles
+	size_t dataSize;		// size of data
+	cl_ulong totalMemory;		// profiling: mem transfers
+	cl_ulong totalPreKernel;	// profiling: before butterflies
+	cl_ulong totalKernel;		// profiling: butterflies
+	cl_uint dim;				// dimensions of data
+	size_t *globalSize;			// kernel dimensions setup
 	size_t *localSize;
 };
 

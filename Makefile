@@ -2,6 +2,7 @@ CC = gcc
 CFLAGS = -Wall -fPIC -O2 -g
 LDFLAGS = -lOpenCL -lm -I/usr/local/cuda/include
 LDTEST = -lfftw3 -lOpenCL -lTopeFFT -L/opt/topefft
+CUDAFLAGS = -I/usr/local/cuda/include -L/usr/local/cuda/lib64 -lcuda -lcudart -lcufft
 
 REQ = src/util.c src/checkers.c 
 OBJ = obj/util.o obj/checkers.o
@@ -12,7 +13,7 @@ topeFFT: $(REQ)
 	$(CC) -shared -Wl,-soname,libTopeFFT.so.1 -o lib/libTopeFFT.so.1.0 $(OBJ)
 
 tests:
-	$(CC) test/1d.c -o bin/1d $(LDTEST)
+	$(CC) $(CFLAGS) -lrt $(CUDAFLAGS) test/1d.c -o bin/1d $(LDTEST)
 
 install:
 	mkdir -p /opt/topefft

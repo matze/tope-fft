@@ -9,37 +9,6 @@
 #include "topefft.h"
 #endif
 
-#include <fftw3.h>
-
-void plotInGnuplot(double *d, fftw_complex *o, int n) {
-	FILE *gplot = popen("gnuplot -persistent", "w");
-	FILE *temp = fopen("delete", "w");
-	int i;
-	#if 0
-	#if 1
-	fprintf(gplot, "plot '-' title 'topeFFT' w l \n");
-	for (i = 0; i < n; i++)  
-		fprintf(gplot, "%lf\n", pow(pow(d[2*i],2)+pow(d[2*i+1],2),0.5));
-	fprintf(gplot, "e");
-	#endif
-	fprintf(gplot, "plot '-' title 'FFTW' w l \n");
-	for (i = 0; i < n; i++)  
-		fprintf(gplot, "%lf\n", pow(pow(o[i][0],2)+pow(o[i][1],2),0.5));
-	fprintf(gplot, "e");
-	#endif
-	#if 1
-	for (i = 0; i < n; i++) { 
-
-		fprintf(temp, "%d\t%lf\t%lf\n", 
-						i, 
-						pow(pow(d[2*i],2)+pow(d[2*i+1],2),0.5),
-						pow(pow(o[i][0],2)+pow(o[i][1],2),0.5));
-	}
-	fprintf(gplot, 	"plot 'delete' using 1:2 title 'topeFFT' w l lw 4,"\
-					"'delete' using 1:3 title 'FFTW' w l lw 2\n");
-	#endif
-}
-
 cl_ulong profileThis(cl_event a) {
 	cl_ulong start = 0, end = 0;
 	clGetEventProfilingInfo(a, CL_PROFILING_COMMAND_END, 
@@ -49,10 +18,40 @@ cl_ulong profileThis(cl_event a) {
 	return (end - start);
 }
 
+void tope1DDestroy(	struct topeFFT *f,
+					struct topePlan1D *t) 
+{
+	if (t->x > 2) // Not initialized for under 2 
+	{
+		f->error = clFlush(f->command_queue);
+		f->error = clFinish(f->command_queue);
+		f->error = clReleaseKernel(t->kernel);
+		f->error = clReleaseKernel(t->kernel_bit);
+		f->error = clReleaseKernel(t->kernel_swap);
+		f->error = clReleaseKernel(t->kernel_twid);
+		f->error = clReleaseProgram(f->program);
+		f->error = clReleaseMemObject(t->data);
+		f->error = clReleaseMemObject(t->bitrev);
+		f->error = clReleaseMemObject(t->twiddle);
+		f->error = clReleaseCommandQueue(f->command_queue);
+		f->error = clReleaseContext(f->context);
+	}
+}
+
 void tope1DExec(	struct topeFFT *f,
 					struct topePlan1D *t, 
 					double *d, int dir) 
 {
+	if (t->x == 2) {			// special case size 2 input
+		double hr = d[0];
+		double hi = d[1];
+		d[0] += d[2];
+		d[1] += d[3];
+		d[2] = hr - d[2];
+		d[3] = hi - d[3];
+		return;
+	}
+
 	/* Run Swapper */	
 	f->error = clSetKernelArg(t->kernel_swap,0,sizeof(cl_mem), (void*)&t->data);
 	$CHECKERROR
@@ -126,52 +125,11 @@ void tope1DExec(	struct topeFFT *f,
 	$CHECKERROR
 	clFinish(f->command_queue);
 	t->totalMemory += profileThis(f->event);
-
 }
 
-void tope1DPlanInit(struct topeFFT *f, 
-					struct topePlan1D *t, 
-					int x, int type, double *d) 
+void tope1DPlanInitBase2(	struct topeFFT *f,
+							struct topePlan1D *t, int x)
 {
-	/* Some Simple Initializations */
-	t->totalMemory = t->totalKernel = t->totalPreKernel = 0;
-	t->x = x;			// size
-	t->log = log2(x);	// Log
-	t->type = type;		// C2C/R2C etc
-	t->dim = 1;			// Dimensions for kernel
-	t->globalSize = malloc(sizeof(size_t)*t->dim);	// Kernel indexing
-	t->localSize = malloc(sizeof(size_t)*t->dim);
-	if( t->log % 3==0 ) t->radix = 8;
-	else{	
-		if ( (t->log) % 2 == 0) t->radix = 4;
-		else {
-			if (x % 2 == 0) t->radix = 2;
-			else {
-				t->radix = -1;
-			}
-		}
-	}
-	if (t->radix == -1) {
-		printf("No algorithm for this input size\n");
-	 	exit(0);
-	}
-	
-
-	/* Memory Allocation */
-	t->dataSize = sizeof(double)*x*2;
-	t->data   = clCreateBuffer(	f->context, CL_MEM_READ_WRITE,
-								t->dataSize, NULL, &f->error);
-	$CHECKERROR
-	t->bitrev = clCreateBuffer(	f->context, CL_MEM_READ_WRITE,
-								sizeof(int)*x, NULL, &f->error);
-	$CHECKERROR
-
-	/* Swapping Kernel Setup*/
-	t->kernel_swap = clCreateKernel(f->program, "swap1D", &f->error);
-	$CHECKERROR
-	f->error = clSetKernelArg(	t->kernel_swap,1,sizeof(cl_mem),
-								(void*)&t->bitrev); $CHECKERROR
-
 	/* Twiddle Setup */
 	t->twiddle = clCreateBuffer(f->context, CL_MEM_READ_WRITE,
 								sizeof(double)*2*(x/4),
@@ -204,8 +162,6 @@ void tope1DPlanInit(struct topeFFT *f,
 				break;
 		case 8:	t->kernel = clCreateKernel(f->program, "DIT8C2C", &f->error);
 				break;
-
-
 	}
 	f->error = clSetKernelArg(t->kernel, 0, sizeof(cl_mem), (void*)&t->data);
 	$CHECKERROR
@@ -230,13 +186,66 @@ void tope1DPlanInit(struct topeFFT *f,
 	$CHECKERROR
 	clFinish(f->command_queue);
 	t->totalPreKernel += profileThis(f->event);
+}
 
+void tope1DPlanInit(struct topeFFT *f, 
+					struct topePlan1D *t, 
+					int x, int type, double *d) 
+{
+	/* Some Simple Initializations */
+	t->totalMemory = t->totalKernel = t->totalPreKernel = 0;
+	t->x = x;			// size
+	t->log = log2(x);	// Log
+	t->type = type;		// C2C/R2C etc
+	t->dim = 1;			// Dimensions for kernel
+	t->globalSize = malloc(sizeof(size_t)*t->dim);	// Kernel indexing
+	t->localSize = malloc(sizeof(size_t)*t->dim);
+
+	/* Decide Radix */
+	if( t->log % 3==0 ) t->radix = 8;
+	else{	
+		if ( (t->log) % 2 == 0) t->radix = 4;
+		else {
+			if (x % 2 == 0) t->radix = 2;
+			else {
+				t->radix = -1;
+			}
+		}
+	}
+	if (t->radix == -1) {
+		printf("No algorithm for this input size\n");
+	 	exit(0);
+	}
+
+	/* Memory Allocation */
+	t->dataSize = sizeof(double)*x*2;
+	t->data   = clCreateBuffer(	f->context, CL_MEM_READ_WRITE,
+								t->dataSize, NULL, &f->error);
+	$CHECKERROR
+	t->bitrev = clCreateBuffer(	f->context, CL_MEM_READ_WRITE,
+								sizeof(int)*x, NULL, &f->error);
+	$CHECKERROR
+
+	/* Swapping Kernel Setup*/
+	t->kernel_swap = clCreateKernel(f->program, "swap1D", &f->error);
+	$CHECKERROR
+	f->error = clSetKernelArg(	t->kernel_swap,1,sizeof(cl_mem),
+								(void*)&t->bitrev); $CHECKERROR
+
+	/* Send Rest of Setup to Right Function s*/
+	if ((t->radix == 2 || t->radix == 4) || t->radix == 8) {
+		if (x > 2) tope1DPlanInitBase2(f,t,x);
+	}
+
+	/* Write Data */
 	f->error = clEnqueueWriteBuffer(f->command_queue, t->data,
-								CL_TRUE, 0, t->dataSize, d, 
-								0, NULL, &f->event);
+									CL_TRUE, 0, t->dataSize, d, 
+									0, NULL, &f->event);
 	$CHECKERROR
 	clFinish(f->command_queue);
 	t->totalMemory += profileThis(f->event);
+
+	/* Readjustments */
 	if(t->radix==8)
 		t->log=t->log/3;
 	if(t->radix==4)

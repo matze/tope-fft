@@ -16,7 +16,7 @@ __kernel void DIT4C2C(	__global double *data,
 	int idX = get_global_id(0);
 	
 	double CLPI = acos(-1.);
-
+	#if 0
 	int powMaxLvl = 11;
 	int powLevels = stage / powMaxLvl;
 	int powRemain = stage % powMaxLvl;
@@ -28,6 +28,11 @@ __kernel void DIT4C2C(	__global double *data,
 	}
 	powX *= pow(4.0f,powRemain);
 	powXm1 = powX/4;
+	#endif
+	#if 1
+	int powX = exp2(log2(4.)*stage);
+	int powXm1 = powX/4;
+	#endif
 
 	int clipOne, clipTwo, clipThr, clipFou;
 	int yIndex, kIndex;
@@ -45,7 +50,7 @@ __kernel void DIT4C2C(	__global double *data,
 									data[clipThr+0],data[clipThr+1],
 									data[clipFou+0],data[clipFou+1]	);
 
-	int coeffUse = kIndex * size / powX;	
+	int coeffUse = kIndex * (size / powX);
 	int red = size/4;
 	double2 clSet1;
 	int quad = coeffUse/red;
@@ -62,6 +67,11 @@ __kernel void DIT4C2C(	__global double *data,
 		clSet1.x = -twiddle[2*buad];
 		clSet1.y = -twiddle[2*buad+1];
 	}
+	else if (quad == 3) {
+		clSet1.x = -twiddle[2*buad+1];
+		clSet1.y =  twiddle[2*buad];
+	}
+
 	double2 clSet2;
 	quad = (2*coeffUse)/red;
 	buad = (2*coeffUse)%red;
@@ -77,6 +87,11 @@ __kernel void DIT4C2C(	__global double *data,
 		clSet2.x = -twiddle[2*buad];
 		clSet2.y = -twiddle[2*buad+1];
 	}
+	else if (quad == 3) {
+		clSet2.x = -twiddle[2*buad+1];
+		clSet2.y =  twiddle[2*buad];
+	}
+
 	double2 clSet3;
 	quad = (3*coeffUse)/red;
 	buad = (3*coeffUse)%red;
@@ -91,6 +106,10 @@ __kernel void DIT4C2C(	__global double *data,
 	else if (quad == 2) {
 		clSet3.x = -twiddle[2*buad];
 		clSet3.y = -twiddle[2*buad+1];
+	}
+	else if (quad == 3) {
+		clSet3.x = -twiddle[2*buad+1];
+		clSet3.y =  twiddle[2*buad];
 	}
 
 	#if 1
@@ -112,20 +131,20 @@ __kernel void DIT4C2C(	__global double *data,
 
 	#if 0
 	if (kIndex != 0) {
-		clSet2.x = cos(two*two*CLPI*kIndex/powX);
-		clSet2.y = mone*sin(two*two*CLPI*kIndex/powX);
+		//clSet2.x = cos(2.*2.*CLPI*kIndex/powX);
+		//clSet2.y = -sin(2.*2.*CLPI*kIndex/powX);
 		TEMPC.x = SIGA.s2 * clSet2.x - SIGA.s3 * clSet2.y;
 		TEMPC.y = SIGA.s3 * clSet2.x + SIGA.s2 * clSet2.y;
 		SIGA.s2 = TEMPC.x;
 		SIGA.s3 = TEMPC.y;
-		clSet1.x = cos(two*CLPI*kIndex/powX);
-		clSet1.y = mone*sin(two*CLPI*kIndex/powX);
+		//clSet1.x = cos(2.*CLPI*kIndex/powX);
+		//clSet1.y = -sin(2.*CLPI*kIndex/powX);
 		TEMPC.x = SIGA.s4 * clSet1.x - SIGA.s5 * clSet1.y;
 		TEMPC.y = SIGA.s5 * clSet1.x + SIGA.s4 * clSet1.y;
 		SIGA.s4 = TEMPC.x;
 		SIGA.s5 = TEMPC.y;
-		clSet3.x = cos(3.0f*two*CLPI*kIndex/powX);
-		clSet3.y = mone*sin(3.0f*two*CLPI*kIndex/powX);
+		//clSet3.x = cos(3.*2.*CLPI*kIndex/powX);
+		//clSet3.y = -sin(3.*2.*CLPI*kIndex/powX);
 		TEMPC.x = SIGA.s6 * clSet3.x - SIGA.s7 * clSet3.y;
 		TEMPC.y = SIGA.s7 * clSet3.x + SIGA.s6 * clSet3.y;
 		SIGA.s6 = TEMPC.x;
@@ -151,13 +170,7 @@ __kernel void DIT4C2C(	__global double *data,
 	data[clipFou+0] = clSet3.x;
 	data[clipFou+1] = clSet3.y;
 	#endif
-
-
-
-
 }
-
-
 
 __kernel void DIT8C2C(	__global double *data, 
 						__global double *twiddle,
@@ -206,7 +219,7 @@ __kernel void DIT8C2C(	__global double *data,
 								data[clipEig+0],data[clipEig+1]);	// se, sf
 
 	
-	int coeffUse = kIndex * size / powX;	
+	int coeffUse = kIndex * (size / powX);	
 	int red = size/4;
 	double2 clSet1;
 	int quad = coeffUse/red;
@@ -321,12 +334,6 @@ __kernel void DIT8C2C(	__global double *data,
 		clSet7.y =  twiddle[2*buad];
 	}
 
-
-
-
-
-
-	
 	if (kIndex != 0) {
 		TMP.x = SIGA.s2 * clSet4.x - SIGA.s3 * clSet4.y;
 		TMP.y = SIGA.s2 * clSet4.y + SIGA.s3 * clSet4.x;
@@ -447,9 +454,6 @@ __kernel void DIT8C2C(	__global double *data,
 	#endif
 }
 
-
-
-
 __kernel void DIT2C2C(	__global double *data, 
 						__global double *twiddle,
 						const int size, unsigned int stage ) 
@@ -457,6 +461,7 @@ __kernel void DIT2C2C(	__global double *data,
 	#if 1
 	int idX = get_global_id(0);
 
+	#if 0
 	int powMaxLvl = 11;
 	int powLevels = stage / powMaxLvl;
 	int powRemain = stage % powMaxLvl;
@@ -466,6 +471,11 @@ __kernel void DIT2C2C(	__global double *data,
 	for (x = 0; x < powLevels; x++)	powX *= pow(2.0f,powMaxLvl);
 	powX *= pow(2.0f,powRemain);
 	powXm1 = powX/2;
+	#endif
+	#if 1
+	int powX = exp2(log2(2.)*stage);
+	int powXm1 = powX/2;
+	#endif
 
 	double CLPI = acos(-1.);
 
@@ -487,6 +497,10 @@ __kernel void DIT2C2C(	__global double *data,
 	else if (quad == 1) {
 		CLCOSSIN.x = twiddle[2*buad+1];
 		CLCOSSIN.y = -twiddle[2*buad];
+	}
+	else if (quad == 2) {
+		CLCOSSIN.x = -twiddle[2*buad];
+		CLCOSSIN.y = -twiddle[2*buad+1];
 	}
 
 	double4 LOC = (double4)(	data[clipStart],data[clipStart+1],

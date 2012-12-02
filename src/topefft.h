@@ -31,14 +31,37 @@ struct topePlan1D {
 	size_t *localSize;
 };
 
+struct topePlan3D {
+	int x, y, z;				// dimensions
+	int logX, logY, logZ;		// Log's of dimensions
+	int type;					// C2C, R2C, etc.
+	int radX, radY, radZ;		// Radices for each dimension;
+	cl_kernel kernel;			// Kernel for each dimension
+	cl_kernel kernel_bit;		// Bit Reversals
+	cl_kernel kernel_swap;		// Swapping
+	cl_kernel kernel_twid;		// Twiddles
+	cl_kernel kernel_div;		// Divide by Volume
+	cl_mem data;				// main data
+	cl_mem bitX, bitY, bitZ;	// Bit reversal data
+	cl_mem twdX, twdY, twdZ;	// Twiddle Data
+	size_t dataSize;			// Size of data
+	cl_ulong totalMemory;		// profiling: mem transfers
+	cl_ulong totalPreKernel;	// profiling: before butterflies
+	cl_ulong totalKernel;		// profiling: butterflies
+	cl_uint dim;				// dimensions of data
+	size_t *globalSize;			// kernel dimensions setup
+	size_t *localSize;		
+};
+
 struct topeFFT {
 	cl_int 				error;
 	cl_event			event;
 	cl_platform_id 		platform_id;
 	cl_device_id 		device;
+	cl_program 			program;
+	cl_program			program3D;
 	cl_context 			context;
 	cl_command_queue 	command_queue;
-	cl_program 			program;
 	cl_uint 			ret_num_platforms;
 	cl_uint 			ret_num_devices;
 };

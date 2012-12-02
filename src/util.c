@@ -31,6 +31,7 @@ void tope1DDestroy(	struct topeFFT *f,
 		f->error = clReleaseKernel(t->kernel_twid);
 		f->error = clReleaseKernel(t->kernel_div);
 		f->error = clReleaseProgram(f->program);
+		f->error = clReleaseProgram(f->program3D);
 		f->error = clReleaseMemObject(t->data);
 		f->error = clReleaseMemObject(t->bitrev);
 		f->error = clReleaseMemObject(t->twiddle);
@@ -85,6 +86,7 @@ void topeFFTInit(struct topeFFT *f)
 											&f->error);
 	$CHECKERROR
 
+	#if 1 /* Prepare 1D Program */
 	// CL File		
 	FILE *fp; 
 	char *source_str;
@@ -118,16 +120,35 @@ void topeFFTInit(struct topeFFT *f)
 							ret_value_size, register1, NULL);
 	register1[ret_value_size] = '\0';
 	fprintf(stderr, "%s\n", register1);
+	#endif
 
-	#if 0 // Get PTX Yes/No
-    size_t *binary_sizes = (size_t*)malloc(t->ret_num_devices * sizeof(size_t));    
-    clGetProgramInfo(	t->program, CL_PROGRAM_BINARY_SIZES, 
-						t->ret_num_devices * sizeof(size_t), binary_sizes, NULL);
-    char** ptx_code = (char**) malloc(t->ret_num_devices * sizeof(char*));
-	int i;
-    for(i=0; i<t->ret_num_devices; ++i) ptx_code[i]= (char*)malloc(binary_sizes[i]);
-    clGetProgramInfo(t->program, CL_PROGRAM_BINARIES, 0, ptx_code, NULL);
-	printf("%s\n", ptx_code[0]);
+	#if 1 /* Prepare 3D Program */
+	char file3D[] = "/opt/topefft/kernels3D.cl";
+	fp = fopen(file3D, "r");
+	if (!fp) {
+		fprintf(stderr, "Failed to load kernels. Check path.\n");
+		exit(1);
+	}
+	source_size = fread(source_str, 1, MAX_SOURCE_SIZE, fp);
+	fclose(fp);
+	f->program3D = clCreateProgramWithSource(	f->context, 1, 
+												(const char **)&source_str, 
+												(const size_t *)&source_size, 
+												&f->error);
+	$CHECKERROR
+
+	// Build
+	f->error = clBuildProgram(	f->program3D, 1, &f->device, 
+								"-cl-nv-verbose", NULL, NULL);
+	clGetProgramBuildInfo(	f->program3D, f->device, CL_PROGRAM_BUILD_LOG, 
+							sizeof(buffer), buffer, NULL);
+	clGetProgramBuildInfo(	f->program3D, f->device, CL_PROGRAM_BUILD_LOG, 0, 
+							NULL, &ret_value_size);
+	register1 = realloc(register1, ret_value_size+1);
+	clGetProgramBuildInfo(	f->program3D, f->device, CL_PROGRAM_BUILD_LOG, 
+							ret_value_size, register1, NULL);
+	register1[ret_value_size] = '\0';
+	fprintf(stderr, "%s\n", register1);
 	#endif
 }
 

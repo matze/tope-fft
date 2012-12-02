@@ -62,11 +62,11 @@ int main(int argc, char *argv[])
 {
 	int N = atoi(argv[1]);
 
-	double *data = calloc(N*2,sizeof(double));
+	double *data = calloc(N*2*3,sizeof(double));
 
 	double PI = acos(-1);
 	int i;
-	for (i = 0; i < N; i++) {
+	for (i = 0; i < N*3; i++) {
 		data[2*i] = i+1;//sin(2*PI*i/N);
 	}
 
@@ -74,9 +74,9 @@ int main(int argc, char *argv[])
 	struct topeFFT framework;
 	topeFFTInit(&framework);
 
-	struct topePlan1D plan;
-	tope1DPlanInit(&framework, &plan, N, C2C, data);
-	tope1DExec(&framework, &plan, data, FORWARD);
+	struct topePlan3D plan;
+	tope3DPlanInit(&framework, &plan, N, N, N, C2C, data);
+	//tope1DExec(&framework, &plan, data, FORWARD);
 
 	#if 0 // Show Output
 	for (i = 0; i < N; i++) {
@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
 	#endif
 	#endif
 	
-	tope1DDestroy(&framework, &plan);
+	//tope1DDestroy(&framework, &plan);
 	#endif
 
 	#if 0 /* FFTW Starts */

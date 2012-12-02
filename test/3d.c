@@ -19,7 +19,7 @@
 void plotInGnuplot(double *d, fftw_complex *o, cufftDoubleComplex *c, int n) {
 	FILE *gplot = popen("gnuplot -persistent", "w");
 	int i;
-	#if 1
+	#if 0
 	#if 1
 	fprintf(gplot, "set multiplot layout 1,3\n");
 	fprintf(gplot, "plot '-' title 'topeFFT' w l lw 3 lc rgb 'red'\n");
@@ -27,14 +27,14 @@ void plotInGnuplot(double *d, fftw_complex *o, cufftDoubleComplex *c, int n) {
 		fprintf(gplot, "%lf\n", pow(pow(d[2*i],2)+pow(d[2*i+1],2),0.5));
 	fprintf(gplot, "e");
 	#endif
-	#if 1
+	#if 0
 	fprintf(gplot, "set origin 0,0\n");
 	fprintf(gplot, "plot '-' title 'FFTW' w l lw 3 lc rgb 'blue'\n");
 	for (i = 0; i < n; i++)  
 		fprintf(gplot, "%lf\n", pow(pow(o[i][0],2)+pow(o[i][1],2),0.5));
 	fprintf(gplot, "e");
 	#endif
-	#if 1
+	#if 0
 	fprintf(gplot, "set origin 0,0\n");
 	fprintf(gplot, "plot '-' title 'cuFFT' w l lw 3 lc rgb 'green'\n");
 	for (i = 0; i < n; i++) 
@@ -96,12 +96,12 @@ int main(int argc, char *argv[])
 	tope1DDestroy(&framework, &plan);
 	#endif
 
-	#if 1 /* FFTW Starts */
+	#if 0 /* FFTW Starts */
 	fftw_complex *in, *out;
 	in = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*N);
 	out = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*N);
 	for (i = 0; i < N; i++) {
-		in[i][0] = i+1;//sin(2*PI*i/N);
+		in[i][0] = sin(2*PI*i/N);
 		in[i][1] = 0;
 	}
 
@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
 	#endif
 	#endif
 
-	#if 1 /* Cuda FFT Starts */
+	#if 0 /* Cuda FFT Starts */
 	float cuTime;
 	cudaEvent_t custart, custop;
 	cufftHandle cudaPlan;
@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
 	cufftPlan1d(&cudaPlan, N, CUFFT_Z2Z, 1);
 	
 	for (i = 0; i < N; i++) {
-		dataLoca[i].x = i+1;//sin(2*PI*i/N);
+		dataLoca[i].x = sin(2*PI*i/N);
 		dataLoca[i].y = 0;
 	}
 	cudaMemcpy(dataCuda, dataLoca, sizeof(cufftDoubleComplex)*N, cudaMemcpyHostToDevice);
@@ -153,8 +153,8 @@ int main(int argc, char *argv[])
 	#endif
 	#endif
 
-	plotInGnuplot(data, out, dataLoca, N);
-	printf("%d\t%f\t%f\t%f\t%d\n", N, ((double)1.0e-9)*(plan.totalKernel+plan.totalPreKernel), t_ns*1.0e-9, cuTime*10e-3, plan.radix);
+	//plotInGnuplot(data, out, dataLoca, N);
+	//printf("%d\t%f\t%f\t%f\t%d\n", N, ((double)1.0e-9)*(plan.totalKernel+plan.totalPreKernel), t_ns*1.0e-9, cuTime*10e-3, plan.radix);
 	return 0; 
 }
 

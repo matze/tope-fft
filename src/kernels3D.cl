@@ -1,6 +1,6 @@
 #pragma OPENCL EXTENSION cl_khr_fp64: enable
 
-__kernel void twid1D(__global double *twiddle, int size)
+__kernel void twiddles(__global double *twiddle, int size)
 {
 	int idX = get_global_id(0);
 	double CLPI = acos(-1.);
@@ -10,10 +10,10 @@ __kernel void twid1D(__global double *twiddle, int size)
 
 __kernel void DIT4C2C(	__global double *data, 
 						__global double *twiddle,
-						const int size, unsigned int stage,
-						unsigned int dir ) 
+						const int x, const int y, const int z,
+						const int stage, const int dir, const int type ) 
 {
-
+#if 0
 	int idX = get_global_id(0);
 	
 	double CLPI = acos(-1.);
@@ -189,13 +189,15 @@ __kernel void DIT4C2C(	__global double *data,
 	data[clipFou+0] = clSet3.x;
 	data[clipFou+1] = clSet3.y;
 	#endif
+#endif
 }
 
 __kernel void DIT8C2C(	__global double *data, 
 						__global double *twiddle,
-						const int size, unsigned int stage,
-						unsigned int dir ) 
+						const int x, const int y, const int z,
+						const int stage, const int dir, const int type ) 
 {
+#if 0
 	int idX = get_global_id(0);
 	double two = 2.0;
 	double mone = 0 - 1.0;
@@ -501,13 +503,15 @@ __kernel void DIT8C2C(	__global double *data,
 	data[clipEig+0] = clSet7.x;
 	data[clipEig+1] = clSet7.y;
 	#endif
+#endif
 }
 
 __kernel void DIT2C2C(	__global double *data, 
 						__global double *twiddle,
-						const int size, unsigned int stage,
-						unsigned int dir ) 
+						const int x, const int y, const int z,
+						const int stage, const int dir, const int type ) 
 {
+#if 0
 	#if 1
 	int idX = get_global_id(0);
 
@@ -583,17 +587,25 @@ __kernel void DIT2C2C(	__global double *data,
 	}
 	#endif
 	#endif
+#endif
 }
 
-__kernel void divide1D(	__global double2 *data, const int size)
+__kernel void divide(	__global double2 *data, int x, int y, int z)
 {
 	int idX = get_global_id(0);
-	data[idX] /= size;
+	data[idX] /= (x*y*z);
 }
 
-__kernel void swap1D(	__global double *data, 
-						__global int *bitRev) 
+__kernel void swapkernel(	__global double *data,	// initial data
+						const unsigned int type, // x or y or z
+						const int x,	// dims
+						const int y,
+						const int z,
+						__global int *bitX,	// bitrev data
+						__global int *bitY,
+						__global int *bitZ) 
 {
+#if 0
 	int idX = get_global_id(0);
 	double holder;
 	int old = 0, new = 0;
@@ -610,27 +622,18 @@ __kernel void swap1D(	__global double *data,
 		data[new+1] = data[old+1];
 		data[old+1] = holder;
 	}
+#endif
 }
 
-__kernel void reverse2(__global int *bitRev, int logSize)
+__kernel void reverse(__global int *bitRev, int logSize)
 {
 	int global_id = get_global_id(0);
-
-	int powMaxLvl = 11;
-	int powLevels, powRemain, powX, x;
 
 	int i, j, andmask, sum = 0, k;
 	for (i = logSize - 1, j = 0; i >= 0; i--, j++) {
 		andmask = 1 << i;
 		k = global_id & andmask;
-
-		powLevels = j / powMaxLvl;
-		powRemain = j % powMaxLvl;
-		powX = 1;
-		for (x = 0; x < powLevels; x++) 
-			powX *= pow(2.0f,powMaxLvl);
-		powX *= pow(2.0f,powRemain);
-		sum += k == 0 ? 0 : powX;
+		sum += k == 0 ? 0 : exp2(log2(2.)*j);
 	}
 	bitRev[global_id] = sum;
 }

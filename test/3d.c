@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
 
 	struct topePlan3D plan;
 	tope3DPlanInit(&framework, &plan, N, N, N, C2C, data);
-	//tope1DExec(&framework, &plan, data, FORWARD);
+	tope3DExec(&framework, &plan, data, FORWARD);
 
 	#if 0 // Show Output
 	for (i = 0; i < N; i++) {
@@ -154,6 +154,7 @@ int main(int argc, char *argv[])
 	#endif
 
 	//plotInGnuplot(data, out, dataLoca, N);
+	printf("%f\n", ((double)1.0e-9)*(plan.totalKernel+plan.totalPreKernel));
 	//printf("%d\t%f\t%f\t%f\t%d\n", N, ((double)1.0e-9)*(plan.totalKernel+plan.totalPreKernel), t_ns*1.0e-9, cuTime*10e-3, plan.radix);
 	return 0; 
 }

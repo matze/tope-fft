@@ -36,7 +36,9 @@ struct topePlan3D {
 	int logX, logY, logZ;		// Log's of dimensions
 	int type;					// C2C, R2C, etc.
 	int radX, radY, radZ;		// Radices for each dimension;
-	cl_kernel kernel;			// Kernel for each dimension
+	cl_kernel kernelX;			// Kernel for each dimension
+	cl_kernel kernelY;			
+	cl_kernel kernelZ;
 	cl_kernel kernel_bit;		// Bit Reversals
 	cl_kernel kernel_swap;		// Swapping
 	cl_kernel kernel_twid;		// Twiddles

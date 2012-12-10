@@ -3,9 +3,9 @@ set -e
 #echo "2D Tests"
 #----------- Radix 2
 
-for j in 4 8 16 32 64 128 256 512 1024 2048 4096 8192 16384
+for j in 4 8 16 32 64 128 256 512 1024 2048 
 do
-	bin/2d $j 4 2> /dev/null
+	bin/2d $j $j 2> /dev/null
 done
 
 #----------- Radix 4

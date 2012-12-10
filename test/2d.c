@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 
 	for (j = 0; j < NY; j++) {
 		for (i = 0; i < NX; i++) {
-			data[2*(j*NX+i)] = count+1;//sin(2*PI*count/(NX*NY));
+			data[2*(j*NX+i)] = sin(2*PI*count/(NX*NY));
 			count++;
 		}
 	}
@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
 	}
 	#endif
 
-	#if 1 // Start Inverse
+	#if 0 // Start Inverse
 	tope2DExec(&framework, &plan, data, INVERSE);
 	#if 1 // Show Output
 	for (i = 0; i < NX; i++) {
@@ -197,7 +197,7 @@ int main(int argc, char *argv[])
 	#endif
 	#endif
 
-	#if 0
+	#if 1
 	printf("%d.%d\tPRE:%f\tKER:%f\tTOT:%f\tFTW:%f\tCUD:%f\n", 	
 									NX,NY,
 									((double)1.0e-9)*(plan.totalPreKernel), 

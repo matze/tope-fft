@@ -127,7 +127,7 @@ void tope1DPlanInitBase2(	struct topeFFT *f,
 								NULL, &f->error);
 	$CHECKERROR
 
-	t->kernel_twid = clCreateKernel(f->program, "twid1D", &f->error);
+	t->kernel_twid = clCreateKernel(f->program1D, "twid1D", &f->error);
 	$CHECKERROR
 
 	f->error = clSetKernelArg(	t->kernel_twid, 0, sizeof(cl_mem), 
@@ -147,11 +147,11 @@ void tope1DPlanInitBase2(	struct topeFFT *f,
 	/* Kernel Setup */
 	switch(t->radix)
 	{
-		case 2:	t->kernel = clCreateKernel(f->program, "DIT2C2C", &f->error);
+		case 2:	t->kernel = clCreateKernel(f->program1D, "DIT2C2C", &f->error);
 				break;
-		case 4:	t->kernel = clCreateKernel(f->program, "DIT4C2C", &f->error);
+		case 4:	t->kernel = clCreateKernel(f->program1D, "DIT4C2C", &f->error);
 				break;
-		case 8:	t->kernel = clCreateKernel(f->program, "DIT8C2C", &f->error);
+		case 8:	t->kernel = clCreateKernel(f->program1D, "DIT8C2C", &f->error);
 				break;
 	}
 	f->error = clSetKernelArg(t->kernel, 0, sizeof(cl_mem), (void*)&t->data);
@@ -162,7 +162,7 @@ void tope1DPlanInitBase2(	struct topeFFT *f,
 	$CHECKERROR
 
 	/* Divide Kernel for Inverse */
-	t->kernel_div = clCreateKernel( f->program, "divide1D", &f->error);
+	t->kernel_div = clCreateKernel( f->program1D, "divide1D", &f->error);
 	$CHECKERROR
 	f->error = clSetKernelArg(	t->kernel_div,0,sizeof(cl_mem),
 								(void*)&t->data); $CHECKERROR
@@ -170,15 +170,15 @@ void tope1DPlanInitBase2(	struct topeFFT *f,
 								(void*)&t->x); $CHECKERROR
 	
 	/* Bit Reversal */
-	t->kernel_bit = clCreateKernel(	f->program, "reverse2", &f->error);
+	t->kernel_bit = clCreateKernel(	f->program1D, "reverse2", &f->error);
 	$CHECKERROR
 	
 	f->error = clSetKernelArg(	t->kernel_bit,0,sizeof(cl_mem), 
 								(void*)&t->bitrev); $CHECKERROR
 	f->error = clSetKernelArg(	t->kernel_bit,1,sizeof(int), 
 								(void*)&t->log);	$CHECKERROR
-	t->globalSize[0] = x;
-	t->localSize[0] = x < 512 ? x/2 : 256;
+	t->globalSize[0] = x/2;
+	t->localSize[0] = x/2 < 512 ? x/4 : 256/2;
 	f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernel_bit,
 										t->dim, NULL, t->globalSize,
 										t->localSize, 0, NULL, &f->event);
@@ -226,7 +226,7 @@ void tope1DPlanInit(struct topeFFT *f,
 	$CHECKERROR
 
 	/* Swapping Kernel Setup*/
-	t->kernel_swap = clCreateKernel(f->program, "swap1D", &f->error);
+	t->kernel_swap = clCreateKernel(f->program1D, "swap1D", &f->error);
 	$CHECKERROR
 	f->error = clSetKernelArg(	t->kernel_swap,1,sizeof(cl_mem),
 								(void*)&t->bitrev); $CHECKERROR
@@ -251,4 +251,26 @@ void tope1DPlanInit(struct topeFFT *f,
 		t->log=t->log/2;
 }
 
+void tope1DDestroy(	struct topeFFT *f,
+					struct topePlan1D *t) 
+{
+	if (t->x > 2) // Not initialized for under 2 
+	{
+		f->error = clFlush(f->command_queue);
+		f->error = clFinish(f->command_queue);
+		f->error = clReleaseKernel(t->kernel);
+		f->error = clReleaseKernel(t->kernel_bit);
+		f->error = clReleaseKernel(t->kernel_swap);
+		f->error = clReleaseKernel(t->kernel_twid);
+		f->error = clReleaseKernel(t->kernel_div);
+		f->error = clReleaseProgram(f->program1D);
+		f->error = clReleaseProgram(f->program2D);
+		f->error = clReleaseProgram(f->program3D);
+		f->error = clReleaseMemObject(t->data);
+		f->error = clReleaseMemObject(t->bitrev);
+		f->error = clReleaseMemObject(t->twiddle);
+		f->error = clReleaseCommandQueue(f->command_queue);
+		f->error = clReleaseContext(f->context);
+	}
+}
 

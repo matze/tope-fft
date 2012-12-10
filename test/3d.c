@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
 	for (k = 0; k < NZ; k++) {
 		for (j = 0; j < NY; j++) {
 			for (i = 0; i < NX; i++) {
-				data[2*(k*NX*NY+j*NX+i)] = sin(2*PI*count/(NX*NY*NZ));
+				data[2*(k*NX*NY+j*NX+i)] = count+1;//sin(2*PI*count/(NX*NY*NZ));
 				count++;
 			}
 		}
@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 	tope3DExec(&framework, &plan, data, FORWARD);
 
 	#if 0 // Show Output
-	for (k = 0; k < 1; k++) {
+	for (k = 0; k < NZ; k++) {
 		for (i = 0; i < NX; i++) {
 			for (j = 0; j < NY; j++) {
 				printf("%.4f %.4f\t", data[2*(k*NX*NY+j*NX+i)], data[2*(k*NX*NY+j*NX+i)+1]);
@@ -101,11 +101,17 @@ int main(int argc, char *argv[])
 	}
 	#endif
 
-	#if 0 // Start Inverse
-	tope1DExec(&framework, &plan, data, INVERSE);
+	#if 1 // Start Inverse
+	tope3DExec(&framework, &plan, data, INVERSE);
 	#if 1 // Show Output
-	for (i = 0; i < N; i++) {
-		printf("%lf:%lf\n", data[2*i], data[2*i+1]);
+	for (k = 0; k < NZ; k++) {
+		for (i = 0; i < NX; i++) {
+			for (j = 0; j < NY; j++) {
+				printf("%.4f %.4f\t", data[2*(k*NX*NY+j*NX+i)], data[2*(k*NX*NY+j*NX+i)+1]);
+			}
+			printf("\n");
+		}
+		printf("---\n");
 	}
 	#endif
 	#endif
@@ -113,7 +119,7 @@ int main(int argc, char *argv[])
 	tope3DDestroy(&framework, &plan);
 	#endif
 
-	#if 1 /* FFTW Starts */
+	#if 0 /* FFTW Starts */
 	fftw_complex *in, *out;
 	count = 0;
 	in = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*NX*NY*NZ);
@@ -151,7 +157,7 @@ int main(int argc, char *argv[])
 
 	#endif
 
-	#if 1 /* Cuda FFT Starts */
+	#if 0 /* Cuda FFT Starts */
 	float cuTime;
 	cudaEvent_t custart, custop;
 	cufftHandle cudaPlan;
@@ -200,7 +206,7 @@ int main(int argc, char *argv[])
 	#endif
 	#endif
 
-	#if 1
+	#if 0
 	printf("%d.%d.%d\tPRE:%f\tKER:%f\tTOT:%f\tFTW:%f\tCUD:%f\n", 	
 									NX,NY,NZ, 
 									((double)1.0e-9)*(plan.totalPreKernel), 

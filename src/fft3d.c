@@ -248,6 +248,7 @@ void tope3DExec(	struct topeFFT *f,
 	#endif
 
 	/* Divide by N if INVERSE */
+	#if 1
 	if (dir == 0) {
 		t->globalSize[0] = t->x;
 		t->globalSize[1] = t->y;
@@ -261,6 +262,7 @@ void tope3DExec(	struct topeFFT *f,
 											&f->event);
 		$CHECKERROR
 	}
+	#endif
 
 	/* Read Data Again */
 	f->error = clEnqueueReadBuffer(	f->command_queue, t->data,

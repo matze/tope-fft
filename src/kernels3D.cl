@@ -692,7 +692,9 @@ __kernel void DIT2C2C(	__global double *data,
 __kernel void divide(	__global double2 *data, int x, int y, int z)
 {
 	int idX = get_global_id(0);
-	data[idX] /= (x*y*z);
+	int idY = get_global_id(1);
+	int idZ = get_global_id(2);
+	data[idZ*x*y+idY*x+idX] /= (x*y*z);
 }
 
 __kernel void swapkernel(	__global double *data,	// initial data

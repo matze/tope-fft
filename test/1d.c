@@ -153,8 +153,8 @@ int main(int argc, char *argv[])
 	#endif
 	#endif
 
-	plotInGnuplot(data, out, dataLoca, N);
-	printf("%d\t%f\t%f\t%f\t%d\n", N, ((double)1.0e-9)*(plan.totalKernel+plan.totalPreKernel), t_ns*1.0e-9, cuTime*10e-3, plan.radix);
+	//plotInGnuplot(data, out, dataLoca, N);
+	printf("%d\t%f\t%f\t%f\t%d\t%f\t%f\t%f\n", N, ((double)1.0e-9)*(plan.totalKernel+plan.totalPreKernel), t_ns*1.0e-9, cuTime*10e-3, plan.radix,((double)1.0e-9)*(plan.totalKernel),((double)1.0e-9)*(plan.totalPreKernel),((double)1.0e-9*plan.totalMemory));
 	return 0; 
 }
 

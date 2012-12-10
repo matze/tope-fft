@@ -1,7 +1,7 @@
 CC = gcc
-CFLAGS = -Wall -fPIC -O2 -g
-LDFLAGS = -lOpenCL -lm -I/usr/local/cuda/include
-LDTEST = -lfftw3 -lOpenCL -lTopeFFT -L/opt/topefft
+CFLAGS = -Wall -fPIC -O2 
+LDFLAGS = -lOpenCL -lm -I/usr/local/cuda/include -g -pg
+LDTEST = -lfftw3 -lOpenCL -lTopeFFT -L/opt/topefft -g -pg
 CUDAFLAGS = -I/usr/local/cuda/include -L/usr/local/cuda/lib64 -lcuda -lcudart -lcufft
 
 REQ = src/util.c src/fft1d.c src/fft3d.c src/checkers.c 
@@ -16,13 +16,13 @@ topeFFT: $(REQ)
 
 tests:
 	$(CC) $(CFLAGS) -lrt $(CUDAFLAGS) test/1d.c -o bin/1d $(LDTEST)
-	$(CC) $(CFLAGS) -lrt $(CUDAFLAGS) test/3d.c -o bin/3d $(LDTEST)
+	$(CC) $(CFLAGS) -lrt $(CUDAFLAGS) test/3d.c -o bin/3d $(LDTEST) 
 
 install:
 	mkdir -p /opt/topefft
-	cp src/kernels.cl /opt/topefft
+	cp src/kernels1D.cl /opt/topefft
 	cp src/kernels3D.cl /opt/topefft
-	mv lib/libTopeFFT.so.1.0 /opt/topefft/libTopeFFT.so.1.0
+	cp lib/libTopeFFT.so.1.0 /opt/topefft/libTopeFFT.so.1.0
 	ln -sf /opt/topefft/libTopeFFT.so.1.0 /opt/topefft/libTopeFFT.so.1
 	ln -sf /opt/topefft/libTopeFFT.so.1.0 /opt/topefft/libTopeFFT.so
 

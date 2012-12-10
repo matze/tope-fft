@@ -19,7 +19,7 @@
 void plotInGnuplot(double *d, fftw_complex *o, cufftDoubleComplex *c, int n) {
 	FILE *gplot = popen("gnuplot -persistent", "w");
 	int i;
-	#if 0
+	#if 1 // Plot from memory
 	#if 1
 	fprintf(gplot, "set multiplot layout 1,3\n");
 	fprintf(gplot, "plot '-' title 'topeFFT' w l lw 3 lc rgb 'red'\n");
@@ -27,14 +27,14 @@ void plotInGnuplot(double *d, fftw_complex *o, cufftDoubleComplex *c, int n) {
 		fprintf(gplot, "%lf\n", pow(pow(d[2*i],2)+pow(d[2*i+1],2),0.5));
 	fprintf(gplot, "e");
 	#endif
-	#if 0
+	#if 1
 	fprintf(gplot, "set origin 0,0\n");
 	fprintf(gplot, "plot '-' title 'FFTW' w l lw 3 lc rgb 'blue'\n");
 	for (i = 0; i < n; i++)  
 		fprintf(gplot, "%lf\n", pow(pow(o[i][0],2)+pow(o[i][1],2),0.5));
 	fprintf(gplot, "e");
 	#endif
-	#if 0
+	#if 1
 	fprintf(gplot, "set origin 0,0\n");
 	fprintf(gplot, "plot '-' title 'cuFFT' w l lw 3 lc rgb 'green'\n");
 	for (i = 0; i < n; i++) 
@@ -42,7 +42,7 @@ void plotInGnuplot(double *d, fftw_complex *o, cufftDoubleComplex *c, int n) {
 	fprintf(gplot, "e");
 	#endif
 	#endif
-	#if 0
+	#if 0 // Plot from file
 	FILE *temp = fopen("delete", "w");
 	for (i = 0; i < n; i++) { 
 		fprintf(temp, "%d\t%lf\t%lf\t%lf\n", 
@@ -55,32 +55,49 @@ void plotInGnuplot(double *d, fftw_complex *o, cufftDoubleComplex *c, int n) {
 					"'delete' using 1:3 title 'FFTW' w l lw 6,"\
 					"'delete' using 1:4 title 'cuFFT' w l lw 2\n");
 	#endif
+	return;
 }
 
 
 int main(int argc, char *argv[])
 {
-	int N = atoi(argv[1]);
+	if (argc!=4) { printf("<exec> NX NY NZ\n"); exit(1); }
+	int NX = atoi(argv[1]);
+	int NY = atoi(argv[2]);
+	int NZ = atoi(argv[3]);
 
-	double *data = calloc(N*2*3,sizeof(double));
-
+	int i,j,k;
+	int count = 0;
 	double PI = acos(-1);
-	int i;
-	for (i = 0; i < N*3; i++) {
-		data[2*i] = i+1;//sin(2*PI*i/N);
+	
+	#if 1 /* Tope FFT Starts */
+	double *data = calloc(NX*NY*NZ*2,sizeof(double));
+
+	for (k = 0; k < NZ; k++) {
+		for (j = 0; j < NY; j++) {
+			for (i = 0; i < NX; i++) {
+				data[2*(k*NX*NY+j*NX+i)] = sin(2*PI*count/(NX*NY*NZ));
+				count++;
+			}
+		}
 	}
 
-	#if 1 /* Tope FFT Starts */
 	struct topeFFT framework;
 	topeFFTInit(&framework);
 
 	struct topePlan3D plan;
-	tope3DPlanInit(&framework, &plan, N, N, N, C2C, data);
+	tope3DPlanInit(&framework, &plan, NX, NY, NZ, C2C, data);
 	tope3DExec(&framework, &plan, data, FORWARD);
 
 	#if 0 // Show Output
-	for (i = 0; i < N; i++) {
-		printf("%lf:%lf\n", data[2*i], data[2*i+1]);
+	for (k = 0; k < 1; k++) {
+		for (i = 0; i < NX; i++) {
+			for (j = 0; j < NY; j++) {
+				printf("%.4f %.4f\t", data[2*(k*NX*NY+j*NX+i)], data[2*(k*NX*NY+j*NX+i)+1]);
+			}
+			printf("\n");
+		}
+		printf("---\n");
 	}
 	#endif
 
@@ -93,21 +110,27 @@ int main(int argc, char *argv[])
 	#endif
 	#endif
 	
-	//tope1DDestroy(&framework, &plan);
+	tope3DDestroy(&framework, &plan);
 	#endif
 
-	#if 0 /* FFTW Starts */
+	#if 1 /* FFTW Starts */
 	fftw_complex *in, *out;
-	in = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*N);
-	out = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*N);
-	for (i = 0; i < N; i++) {
-		in[i][0] = sin(2*PI*i/N);
-		in[i][1] = 0;
+	count = 0;
+	in = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*NX*NY*NZ);
+	out = (fftw_complex*)fftw_malloc(sizeof(fftw_complex)*NX*NY*NZ);
+	for (k = 0; k < NZ; k++) {
+		for (j = 0; j < NY; j++) {
+			for (i = 0; i < NX; i++) {
+				in[k*NX*NY+j*NX+i][0] = sin(2*PI*count/(NX*NY*NZ));
+				in[k*NX*NY+j*NX+i][1] = 0;
+				count++;
+			}
+		}
 	}
 
 	struct timespec start,end;
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
-	fftw_plan p = fftw_plan_dft_1d(N, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+	fftw_plan p = fftw_plan_dft_3d(NZ, NY, NX, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
 	fftw_execute(p);
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end);
 	double t_ns = (double)(end.tv_sec - start.tv_sec) * 1.0e9 + (double)(end.tv_nsec - start.tv_nsec);
@@ -115,47 +138,87 @@ int main(int argc, char *argv[])
 	fftw_destroy_plan(p);
 
 	#if 0 // Show Output
-	for (i = 0; i < N; i++) {
-		printf("%lf:%lf\n", out[i][0], out[i][1]);
+	for (k = 0; k < 1; k++) {
+		for (i = 0; i < NX; i++) {
+			for (j = 0; j < NY; j++) {
+				printf("%.4f %.4f\t", out[k*NX*NY+j*NX+i][0], out[k*NX*NY+j*NX+i][1]);
+			}
+			printf("\n");
+		}
+		printf("---\n");
 	}
 	#endif
+
 	#endif
 
-	#if 0 /* Cuda FFT Starts */
+	#if 1 /* Cuda FFT Starts */
 	float cuTime;
 	cudaEvent_t custart, custop;
 	cufftHandle cudaPlan;
-	cufftDoubleComplex *dataCuda;
+	cufftDoubleComplex *dataCuda1, *dataCuda2;
 	cufftDoubleComplex *dataLoca;
-	dataLoca = (cufftDoubleComplex*)malloc(sizeof(cufftDoubleComplex)*N);
-	cudaMalloc((void**)&dataCuda, sizeof(cufftDoubleComplex)*N*1);
-	cufftPlan1d(&cudaPlan, N, CUFFT_Z2Z, 1);
-	
-	for (i = 0; i < N; i++) {
-		dataLoca[i].x = sin(2*PI*i/N);
-		dataLoca[i].y = 0;
+	dataLoca = (cufftDoubleComplex*)malloc(sizeof(cufftDoubleComplex)*NX*NY*NZ);
+	cudaMalloc((void**)&dataCuda1, sizeof(cufftDoubleComplex)*NX*NY*NZ);
+	cudaMalloc((void**)&dataCuda2, sizeof(cufftDoubleComplex)*NX*NY*NZ);
+	cufftPlan3d(&cudaPlan, NX, NY, NZ, CUFFT_Z2Z);
+	count = 0;	
+	for (k = 0; k < NZ; k++) {
+		for (j = 0; j < NY; j++) {
+			for (i = 0; i < NX; i++) {
+				dataLoca[k*NX*NY+j*NX+i].x = sin(2*PI*count/(NX*NY*NZ));
+				dataLoca[k*NX*NY+j*NX+i].y = 0;
+				count++;
+			}
+		}
 	}
-	cudaMemcpy(dataCuda, dataLoca, sizeof(cufftDoubleComplex)*N, cudaMemcpyHostToDevice);
+
+	cudaMemcpy(	dataCuda1, dataLoca, 
+				sizeof(cufftDoubleComplex)*NX*NY*NZ, cudaMemcpyHostToDevice);
 	cudaEventCreate(&custart);
 	cudaEventCreate(&custop);
 	cudaEventRecord(custart, 0);
-	cufftExecZ2Z(cudaPlan, dataCuda, dataCuda, CUFFT_FORWARD);
+	cufftExecZ2Z(cudaPlan, dataCuda1, dataCuda2, CUFFT_FORWARD);
 	cudaEventRecord(custop, 0);
 	cudaEventSynchronize(custop);
 	cudaEventElapsedTime(&cuTime, custart, custop);
-	cudaMemcpy(dataLoca, dataCuda, sizeof(cufftDoubleComplex)*N, cudaMemcpyDeviceToHost);
+	cudaMemcpy(	dataLoca, dataCuda2, 
+				sizeof(cufftDoubleComplex)*NX*NY*NZ, cudaMemcpyDeviceToHost);
 	cufftDestroy(cudaPlan);
-	cudaFree(dataCuda);
+	cudaFree(dataCuda1);
+	cudaFree(dataCuda2);
 	#if 0 // Show Output
-	for (i = 0; i < N; i++) {
-		printf("%lf:%lf\n", dataLoca[i].x, dataLoca[i].y);
+	for (k = 0; k < 1; k++) {
+		for (i = 0; i < NX; i++) {
+			for (j = 0; j < NY; j++) {
+				printf("%g:%g\t", 	dataLoca[k*NX*NY+j*NX+i].x, 
+									dataLoca[k*NX*NY+j*NX+i].y);
+			}
+			printf("\n");
+		}
+		printf("---\n");
 	}
 	#endif
 	#endif
 
-	//plotInGnuplot(data, out, dataLoca, N);
-	printf("%f\n", ((double)1.0e-9)*(plan.totalKernel+plan.totalPreKernel));
-	//printf("%d\t%f\t%f\t%f\t%d\n", N, ((double)1.0e-9)*(plan.totalKernel+plan.totalPreKernel), t_ns*1.0e-9, cuTime*10e-3, plan.radix);
-	return 0; 
+	#if 1
+	printf("%d.%d.%d\tPRE:%f\tKER:%f\tTOT:%f\tFTW:%f\tCUD:%f\n", 	
+									NX,NY,NZ, 
+									((double)1.0e-9)*(plan.totalPreKernel), 
+									((double)1.0e-9)*(plan.totalKernel), 
+									((double)1.0e-9)*(	plan.totalKernel	+
+														plan.totalPreKernel), 
+									t_ns*1.0e-9, cuTime*10e-3);
+	#endif
+	#if 0
+	plotInGnuplot(data, out, dataLoca, NX*NY*NZ);
+	#endif
+	#if 0
+	printf("%d.%d.%d\t%f\t%f\t%f\n", 	NX,NY,NZ, 
+										((double)1.0e-9)*(plan.totalKernel	+
+										plan.totalPreKernel), 
+										t_ns*1.0e-9, cuTime*10e-3);
+	#endif
+	return 0;
 }
+
 

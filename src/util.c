@@ -18,28 +18,6 @@ cl_ulong profileThis(cl_event a) {
 	return (end - start);
 }
 
-void tope1DDestroy(	struct topeFFT *f,
-					struct topePlan1D *t) 
-{
-	if (t->x > 2) // Not initialized for under 2 
-	{
-		f->error = clFlush(f->command_queue);
-		f->error = clFinish(f->command_queue);
-		f->error = clReleaseKernel(t->kernel);
-		f->error = clReleaseKernel(t->kernel_bit);
-		f->error = clReleaseKernel(t->kernel_swap);
-		f->error = clReleaseKernel(t->kernel_twid);
-		f->error = clReleaseKernel(t->kernel_div);
-		f->error = clReleaseProgram(f->program);
-		f->error = clReleaseProgram(f->program3D);
-		f->error = clReleaseMemObject(t->data);
-		f->error = clReleaseMemObject(t->bitrev);
-		f->error = clReleaseMemObject(t->twiddle);
-		f->error = clReleaseCommandQueue(f->command_queue);
-		f->error = clReleaseContext(f->context);
-	}
-}
-
 void topeFFTInit(struct topeFFT *f)
 {
 	// Platform
@@ -91,7 +69,7 @@ void topeFFTInit(struct topeFFT *f)
 	FILE *fp; 
 	char *source_str;
 	size_t source_size;
-	char fileName[] = "/opt/topefft/kernels.cl";
+	char fileName[] = "/opt/topefft/kernels1D.cl";
 	fp = fopen(fileName, "r");
 	if (!fp) {
 		fprintf(stderr, "Failed to load kernels. Check path.\n");
@@ -100,23 +78,23 @@ void topeFFTInit(struct topeFFT *f)
 	source_str = (char*)malloc(MAX_SOURCE_SIZE);
 	source_size = fread(source_str, 1, MAX_SOURCE_SIZE, fp);
 	fclose(fp);
-	f->program = clCreateProgramWithSource(	f->context, 1, 
-											(const char **)&source_str, 
-											(const size_t *)&source_size, 
-											&f->error);
+	f->program1D = clCreateProgramWithSource(	f->context, 1, 
+												(const char **)&source_str, 
+												(const size_t *)&source_size, 
+												&f->error);
 	$CHECKERROR
 
 	// Build
 	char buffer[2048];
-	f->error = clBuildProgram(	f->program, 1, &f->device, 
+	f->error = clBuildProgram(	f->program1D, 1, &f->device, 
 								"-cl-nv-verbose", NULL, NULL);
-	clGetProgramBuildInfo(	f->program, f->device, CL_PROGRAM_BUILD_LOG, 
+	clGetProgramBuildInfo(	f->program1D, f->device, CL_PROGRAM_BUILD_LOG, 
 							sizeof(buffer), buffer, NULL);
 	size_t ret_value_size;
-	clGetProgramBuildInfo(	f->program, f->device, CL_PROGRAM_BUILD_LOG, 0, 
+	clGetProgramBuildInfo(	f->program1D, f->device, CL_PROGRAM_BUILD_LOG, 0, 
 							NULL, &ret_value_size);
 	char *register1 = malloc(ret_value_size+1);
-	clGetProgramBuildInfo(	f->program, f->device, CL_PROGRAM_BUILD_LOG, 
+	clGetProgramBuildInfo(	f->program1D, f->device, CL_PROGRAM_BUILD_LOG, 
 							ret_value_size, register1, NULL);
 	register1[ret_value_size] = '\0';
 	fprintf(stderr, "%s\n", register1);

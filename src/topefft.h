@@ -60,7 +60,8 @@ struct topeFFT {
 	cl_event			event;
 	cl_platform_id 		platform_id;
 	cl_device_id 		device;
-	cl_program 			program;
+	cl_program 			program1D;
+	cl_program			program2D;
 	cl_program			program3D;
 	cl_context 			context;
 	cl_command_queue 	command_queue;

@@ -1,9 +1,10 @@
 #pragma OPENCL EXTENSION cl_khr_fp64: enable
 
+#define CLPI 3.141592653589793238462643383279
+
 __kernel void twiddles(__global double *twiddle, int size)
 {
 	int idX = get_global_id(0);
-	double CLPI = acos(-1.);
 	twiddle[2*idX] 	=  cos(2.*CLPI*idX/size);
 	twiddle[2*idX+1] = -sin(2.*CLPI*idX/size);
 }
@@ -17,8 +18,6 @@ __kernel void DIT8C2C(	__global double *data,
 	int idY = get_global_id(1);
 	int idZ = get_global_id(2);
 
-	double CLPI = acos(-1.);
-	
 	#if 1
 	int powMaxLvl = 4;
 	int powLevels = stage / powMaxLvl;
@@ -362,22 +361,20 @@ __kernel void DIT4C2C(	__global double *data,
 	int idY = get_global_id(1);
 	int idZ = get_global_id(2);
 
-	double CLPI = acos(-1.);
-	
-	#if 0
-	int powMaxLvl = 11;
+	#if 1
+	int powMaxLvl = 7;
 	int powLevels = stage / powMaxLvl;
 	int powRemain = stage % powMaxLvl;
 	int powX = 1;
 	int powXm1 = 1;
-	int x;
-	for (x = 0; x < powLevels; x++) {
+	int xx;
+	for (xx = 0; xx < powLevels; xx++) {
 		powX *= pow(4.0f,powMaxLvl);
 	}
 	powX *= pow(4.0f,powRemain);
 	powXm1 = powX/4;
 	#endif
-	#if 1
+	#if 0
 	int powX = exp2(log2(4.)*stage);
 	int powXm1 = powX/4;
 	#endif
@@ -567,126 +564,80 @@ __kernel void DIT2C2C(	__global double *data,
 	int idY = get_global_id(1);
 	int idZ = get_global_id(2);
 
-	double CLPI = acos(-1.);
 	int BASE 	= 0;
 	int STRIDE 	= 1;
 
-	#if 0
+	#if 1
 	int powMaxLvl = 11;
-	int powLevels = level1GPU / powMaxLvl;
-	int powRemain = level1GPU % powMaxLvl;
+	int powLevels = stage / powMaxLvl;
+	int powRemain = stage % powMaxLvl;
 	int powX = 1;
 	int powXm1 = 1;
-	int x;
-	for (x = 0; x < powLevels; x++) {
+	int xx;
+	for (xx = 0; xx < powLevels; xx++) {
 		powX *= pow(2.0f,powMaxLvl);
 	}
 	powX *= pow(2.0f,powRemain);
 	powXm1 = powX/2;
 	#endif
-	#if 1
+	#if 0
 	int powX = exp2(log2(2.)*stage);
 	int powXm1 = powX/2;
 	#endif
 
-	int yIndex, kIndex, clipStart, clipEnd, coeffUse, red, quad, buad;
+	int yIndex, kIndex, clipOne, clipTwo, coeffUse, red, quad, buad;
 	double2 CLCOSSIN;
 	
 	switch(type)
 	{
-		case 1: BASE = idZ*x*y + idY*x; 
+		case 1: BASE 		= idZ*x*y + idY*x; 
 				yIndex 		= idX / powXm1;
 				kIndex 		= idX % powXm1;	
-				clipStart 	= 2 * (BASE+STRIDE*(kIndex + yIndex * powX));
-				clipEnd 	= 2 * (BASE+STRIDE*(kIndex + yIndex * powX + powXm1));
 				coeffUse 	= kIndex * (x / powX);
-				#if 1
-				red = x/4;
-				quad = coeffUse/red;
-				buad = coeffUse%red;
-				switch(quad)
-				{
-					case 0:	CLCOSSIN.x = twiddle[2*coeffUse];
-							CLCOSSIN.y = twiddle[2*coeffUse+1]; break;
-					case 1: CLCOSSIN.x = twiddle[2*buad+1];
-							CLCOSSIN.y = -twiddle[2*buad];		break;
-					case 2:	CLCOSSIN.x = -twiddle[2*buad];
-							CLCOSSIN.y = -twiddle[2*buad+1];	break;
-				}
-				if (dir == 0) CLCOSSIN.y *= -1;
-				#endif
-				#if 0
-				CLCOSSIN.x 	= cos(two*CLPI*(coeffUse/2)/xR);
-				CLCOSSIN.y 	= sin(two*CLPI*(coeffUse/2)/xR);
-				#endif
+				red 		= x / 4;
 				break;
 		case 2: BASE 		= idZ*x*y + idX; 
 				STRIDE 		= x; 
 				yIndex 		= idY / powXm1;
 				kIndex 		= idY % powXm1;
-				clipStart 	= 2 * (BASE+STRIDE*(kIndex + yIndex * powX));
-				clipEnd 	= 2 * (BASE+STRIDE*(kIndex + yIndex * powX + powXm1));
 				coeffUse 	= kIndex * (y / powX);
-				#if 1
-				red  = y/4;
-				quad = coeffUse/red;
-				buad = coeffUse%red;
-				switch(quad)
-				{
-					case 0:	CLCOSSIN.x = twiddle[2*coeffUse];
-							CLCOSSIN.y = twiddle[2*coeffUse+1]; break;
-					case 1: CLCOSSIN.x = twiddle[2*buad+1];
-							CLCOSSIN.y = -twiddle[2*buad];		break;
-					case 2:	CLCOSSIN.x = -twiddle[2*buad];
-							CLCOSSIN.y = -twiddle[2*buad+1];	break;
-				}
-				if (dir == 0) CLCOSSIN.y *= -1;
-				#endif
-				#if 0
-				CLCOSSIN.x 	= cos(two*CLPI*(coeffUse/2)/yR);
-				CLCOSSIN.y 	= sin(two*CLPI*(coeffUse/2)/yR);
-				#endif
+				red 		= y / 4;
 				break;
 		case 3: BASE 		= idY*x + idX; 
 				STRIDE 		= x * y; 
 				yIndex 		= idZ / powXm1;
 				kIndex 		= idZ % powXm1;
-				clipStart 	= 2 * (BASE+STRIDE*(kIndex + yIndex * powX));
-				clipEnd 	= 2 * (BASE+STRIDE*(kIndex + yIndex * powX + powXm1));
 				coeffUse 	= kIndex * (z / powX);
-				#if 1
-				red  = z/4;
-				quad = coeffUse/red;
-				buad = coeffUse%red;
-				switch(quad)
-				{
-					case 0:	CLCOSSIN.x = twiddle[2*coeffUse];
-							CLCOSSIN.y = twiddle[2*coeffUse+1]; break;
-					case 1: CLCOSSIN.x = twiddle[2*buad+1];
-							CLCOSSIN.y = -twiddle[2*buad];		break;
-					case 2:	CLCOSSIN.x = -twiddle[2*buad];
-							CLCOSSIN.y = -twiddle[2*buad+1];	break;
-				}
-				if (dir == 0) CLCOSSIN.y *= -1;
-				#endif
-				#if 0
-				CLCOSSIN.x 	= cos(two*CLPI*(coeffUse/2)/zR);
-				CLCOSSIN.y 	= sin(two*CLPI*(coeffUse/2)/zR);
-				#endif
+				red  		= z / 4;
 				break; 
 	}
 
-	double4 LOC = (double4)(	data[clipStart + 0],	data[clipStart + 1],
-								data[clipEnd + 0],		data[clipEnd + 1]);
-	double4 FIN = (double4)(	LOC.x + LOC.z * CLCOSSIN.x - LOC.w * CLCOSSIN.y,
-								LOC.y + LOC.w * CLCOSSIN.x + LOC.z * CLCOSSIN.y,
-								LOC.x - LOC.z * CLCOSSIN.x + LOC.w * CLCOSSIN.y,
-								LOC.y - LOC.w * CLCOSSIN.x - LOC.z * CLCOSSIN.y);
+	clipOne 	= 2 * (BASE+STRIDE*(kIndex + yIndex * powX));
+	clipTwo 	= 2 * (BASE+STRIDE*(kIndex + yIndex * powX + powXm1));
 
-	data[clipStart + 0] = FIN.x;
-	data[clipStart + 1] = FIN.y;
-	data[clipEnd + 0] 	= FIN.z;
-	data[clipEnd + 1] 	= FIN.w;
+	quad = coeffUse / red;
+	buad = coeffUse % red;
+	switch(quad) {
+		case 0:	CLCOSSIN.x = twiddle[2*coeffUse];
+				CLCOSSIN.y = twiddle[2*coeffUse+1]; 	break;
+		case 1: CLCOSSIN.x = twiddle[2*buad+1];
+				CLCOSSIN.y = -twiddle[2*buad];			break;
+		case 2:	CLCOSSIN.x = -twiddle[2*buad];
+				CLCOSSIN.y = -twiddle[2*buad+1];		break;
+	}
+	if (dir == 0) CLCOSSIN.y *= -1;
+	
+	double4 LOC = (double4)( data[clipOne + 0],	data[clipOne + 1],
+							 data[clipTwo + 0],	data[clipTwo + 1]);
+	double4 FIN = (double4)( LOC.x + LOC.z * CLCOSSIN.x - LOC.w * CLCOSSIN.y,
+							 LOC.y + LOC.w * CLCOSSIN.x + LOC.z * CLCOSSIN.y,
+							 LOC.x - LOC.z * CLCOSSIN.x + LOC.w * CLCOSSIN.y,
+							 LOC.y - LOC.w * CLCOSSIN.x - LOC.z * CLCOSSIN.y);
+
+	data[clipOne + 0] 	= FIN.x;
+	data[clipOne + 1] 	= FIN.y;
+	data[clipTwo + 0] 	= FIN.z;
+	data[clipTwo + 1] 	= FIN.w;
 }
 
 __kernel void divide(	__global double2 *data, int x, int y, int z)

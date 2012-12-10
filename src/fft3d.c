@@ -18,13 +18,13 @@ void tope3DExecX(	struct topeFFT *f,
 	f->error = clSetKernelArg(t->kernel_swap, 7, sizeof(int), (void*)&type);
 	$CHECKERROR
 	
-	/* Run Swapper */	
+	/* Run Swapper */
 	t->globalSize[0] = t->x;
 	t->globalSize[1] = t->y;
 	t->globalSize[2] = t->z;
-	t->localSize[0] = t->x < 128 ? t->x/2 : 128;
-	t->localSize[1] = 1;
-	t->localSize[2] = 1;
+	t->localSize[0] = t->x < 16 ? t->x/4 : 16;
+	t->localSize[1] = t->y < 16 ? t->y/4 : 16;
+	t->localSize[2] = 1;	
 	f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernel_swap,
 										t->dim, NULL, t->globalSize,
 										t->localSize, 0, NULL, &f->event);
@@ -38,15 +38,18 @@ void tope3DExecX(	struct topeFFT *f,
 	t->localSize[1] = t->localSize[2] = 1;
 	if (t->radX==8) {
 		t->globalSize[0] = t->x/8;
-		t->localSize[0] = t->x/8 < 128 ? t->x/8 : 128;
+		t->localSize[0] = t->x/8 < 8 ? t->x/8 : 8;
+		t->localSize[1] = t->y < 8 ? t->y/2 : 8;
 	}
 	else if(t->radX==4) {
 		t->globalSize[0] = t->x/4;
-		t->localSize[0] = t->x/4 < 128 ? t->x/4 : 128;
+		t->localSize[0] = t->x/4 < 16 ? t->x/4 : 16;
+		t->localSize[2] = t->z < 8 ? t->z/4 : 8;
 	}
 	else if(t->radX==2) {
 		t->globalSize[0] = t->x/2;
-		t->localSize[0] = t->x/2 < 128 ? t->x/2 : 128;
+		t->localSize[0] = t->x/2 < 16 ? t->x/2 : 16;
+		t->localSize[1] = t->y < 16 ? t->y/2 : 16;
 	}
 
 	int s;
@@ -87,8 +90,8 @@ void tope3DExecY(	struct topeFFT *f,
 	t->globalSize[0] = t->x;
 	t->globalSize[1] = t->y;
 	t->globalSize[2] = t->z;
-	t->localSize[0] = 1;
-	t->localSize[1] = t->y < 128 ? t->y/2 : 128;
+	t->localSize[0] = t->x < 16 ? t->x/4 : 16;
+	t->localSize[1] = t->y < 16 ? t->y/4 : 16;
 	t->localSize[2] = 1;
 	f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernel_swap,
 										t->dim, NULL, t->globalSize,
@@ -103,15 +106,18 @@ void tope3DExecY(	struct topeFFT *f,
 	t->localSize[0] = t->localSize[2] = 1;
 	if (t->radY==8) {
 		t->globalSize[1] = t->y/8;
-		t->localSize[1] = t->y/8 < 128 ? t->y/8 : 128;
+		t->localSize[1] = t->y/8 < 8 ? t->y/8 : 8;
+		t->localSize[0] = t->x < 8 ? t->x/2 : 8;
 	}
 	else if(t->radY==4) {
 		t->globalSize[1] = t->y/4;
-		t->localSize[1] = t->y/4 < 128 ? t->y/4 : 128;
+		t->localSize[1] = t->y/4 < 16 ? t->y/4 : 16;
+		t->localSize[0] = t->x < 8 ? t->x/4 : 8;
 	}
 	else if(t->radY==2) {
 		t->globalSize[1] = t->y/2;
-		t->localSize[1] = t->y/2 < 128 ? t->y/2 : 128;
+		t->localSize[1] = t->y/2 < 16 ? t->y/2 : 16;
+		t->localSize[0] = t->x < 16 ? t->x/2 : 16;
 	}
 
 	int s;
@@ -148,13 +154,13 @@ void tope3DExecZ(	struct topeFFT *f,
 	f->error = clSetKernelArg(t->kernel_swap, 7, sizeof(int), (void*)&type);
 	$CHECKERROR
 
-	/* Run Swapper */	
+	/* Run Swapper */
 	t->globalSize[0] = t->x;
 	t->globalSize[1] = t->y;
 	t->globalSize[2] = t->z;
-	t->localSize[0] = 1;
+	t->localSize[0] = t->x < 16 ? t->x/4 : 16;
 	t->localSize[1] = 1;
-	t->localSize[2] = t->z < 128 ? t->z/2 : 128;
+	t->localSize[2] = t->z < 16 ? t->z/4 : 16;
 	f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernel_swap,
 										t->dim, NULL, t->globalSize,
 										t->localSize, 0, NULL, &f->event);
@@ -168,15 +174,18 @@ void tope3DExecZ(	struct topeFFT *f,
 	t->localSize[0] = t->localSize[1] = 1;
 	if (t->radZ==8) {
 		t->globalSize[2] = t->z/8;
-		t->localSize[2] = t->z/8 < 128 ? t->z/8 : 128;
+		t->localSize[2] = t->z/8 < 8 ? t->z/8 : 8;
+		t->localSize[0] = t->x < 8 ? t->x/2 : 8;
 	}
 	else if(t->radZ==4) {
 		t->globalSize[2] = t->z/4;
-		t->localSize[2] = t->z/4 < 128 ? t->z/4 : 128;
+		t->localSize[2] = t->z/4 < 16 ? t->z/4 : 16;
+		t->localSize[0] = t->x < 8 ? t->x/4 : 8;
 	}
 	else if(t->radZ==2) {
 		t->globalSize[2] = t->z/2;
-		t->localSize[2] = t->z/2 < 128 ? t->z/2 : 128;
+		t->localSize[2] = t->z/2 < 16 ? t->z/2 : 16;
+		t->localSize[0] = t->x < 16 ? t->x/2 : 16;
 	}
 
 	int s;
@@ -250,11 +259,13 @@ void tope3DExec(	struct topeFFT *f,
 	/* Divide by N if INVERSE */
 	#if 1
 	if (dir == 0) {
+
 		t->globalSize[0] = t->x;
 		t->globalSize[1] = t->y;
 		t->globalSize[2] = t->z;
-		t->localSize[0] = t->x < 512 ? t->x/2 : 256;
-		t->localSize[1] = t->localSize[2] = 1;
+		t->localSize[0] = t->x < 4 ? t->x/2 : 4;
+		t->localSize[1] = t->y < 4 ? t->y/2 : 4;
+		t->localSize[2] = t->z < 4 ? t->z/2 : 4;
 
 		f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernel_div,
 											t->dim, NULL, t->globalSize,
@@ -288,9 +299,10 @@ void tope3DPlanInitBase2X(	struct topeFFT *f,
 								(void*)&t->x);		$CHECKERROR
 
 	t->globalSize[0] = t->x/4;
-	t->localSize[0] = t->x/4 < 512 ? t->x/4 : 256/4;
+	t->localSize[0] = t->x/4 < 256 ? t->x/4 : 256;
 	t->globalSize[1] = t->globalSize[2] = 1;
 	t->localSize[1] = t->localSize[2] = 1;
+
 	f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernel_twid,
 										t->dim, NULL, t->globalSize,
 										t->localSize, 0, NULL, &f->event);
@@ -325,7 +337,7 @@ void tope3DPlanInitBase2X(	struct topeFFT *f,
 	f->error = clSetKernelArg(	t->kernel_bit,1,sizeof(int), 
 								(void*)&t->logX);	$CHECKERROR
 	t->globalSize[0] = t->x/2;
-	t->localSize[0] = t->x/2 < 512 ? t->x/4 : 256/2;
+	t->localSize[0] = t->x/2 < 512 ? t->x/4 : 512;
 	f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernel_bit,
 										t->dim, NULL, t->globalSize,
 										t->localSize, 0, NULL, &f->event);
@@ -349,9 +361,10 @@ void tope3DPlanInitBase2Y(	struct topeFFT *f,
 								(void*)&t->y);		$CHECKERROR
 
 	t->globalSize[0] = t->y/4;
-	t->localSize[0] = t->y/4 < 512 ? t->y/4 : 256/4;
+	t->localSize[0] = t->y/4 < 256 ? t->y/4 : 256;
 	t->globalSize[1] = t->globalSize[2] = 1;
 	t->localSize[1] = t->localSize[2] = 1;
+
 	f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernel_twid,
 										t->dim, NULL, t->globalSize,
 										t->localSize, 0, NULL, &f->event);
@@ -386,7 +399,8 @@ void tope3DPlanInitBase2Y(	struct topeFFT *f,
 	f->error = clSetKernelArg(	t->kernel_bit,1,sizeof(int), 
 								(void*)&t->logY);	$CHECKERROR
 	t->globalSize[0] = t->y/2;
-	t->localSize[0] = t->y/2 < 512 ? t->y/4 : 256/2;
+	t->localSize[0] = t->y/2 < 512 ? t->y/4 : 512;
+
 	f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernel_bit,
 										t->dim, NULL, t->globalSize,
 										t->localSize, 0, NULL, &f->event);
@@ -410,9 +424,10 @@ void tope3DPlanInitBase2Z(	struct topeFFT *f,
 								(void*)&t->z);		$CHECKERROR
 
 	t->globalSize[0] = t->z/4;
-	t->localSize[0] = t->z/4 < 512 ? t->z/4 : 256/4;
+	t->localSize[0] = t->z/4 < 256 ? t->z/4 : 256;
 	t->globalSize[1] = t->globalSize[2] = 1;
 	t->localSize[1] = t->localSize[2] = 1;
+
 	f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernel_twid,
 										t->dim, NULL, t->globalSize,
 										t->localSize, 0, NULL, &f->event);
@@ -447,7 +462,7 @@ void tope3DPlanInitBase2Z(	struct topeFFT *f,
 	f->error = clSetKernelArg(	t->kernel_bit,1,sizeof(int), 
 								(void*)&t->logZ);	$CHECKERROR
 	t->globalSize[0] = t->z/2;
-	t->localSize[0] = t->z/2 < 512 ? t->z/4 : 256/2;
+	t->localSize[0] = t->z/2 < 512 ? t->z/4 : 512;
 	f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernel_bit,
 										t->dim, NULL, t->globalSize,
 										t->localSize, 0, NULL, &f->event);

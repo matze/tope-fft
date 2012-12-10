@@ -54,7 +54,6 @@ void tope2DExecX(	struct topeFFT *f,
 		f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernelX,
 											t->dim, NULL, t->globalSize,
 											t->localSize, 0, NULL, &f->event);
-		clEnqueueNDRangeChecker(&f->error);
 		$CHECKERROR
 		clFinish(f->command_queue);
 		t->totalKernel += profileThis(f->event);

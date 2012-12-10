@@ -92,3 +92,5 @@ struct topeFFT {
 	cl_uint 			ret_num_devices;
 };
 
+cl_ulong profileThis(cl_event);
+

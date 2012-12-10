@@ -100,6 +100,35 @@ void topeFFTInit(struct topeFFT *f)
 	fprintf(stderr, "%s\n", register1);
 	#endif
 
+	#if 1 /* Prepare 2D Program */
+	char file2D[] = "/opt/topefft/kernels2D.cl";
+	fp = fopen(file2D, "r");
+	if (!fp) {
+		fprintf(stderr, "Failed to load kernels. Check path.\n");
+		exit(1);
+	}
+	source_size = fread(source_str, 1, MAX_SOURCE_SIZE, fp);
+	fclose(fp);
+	f->program2D = clCreateProgramWithSource(	f->context, 1, 
+												(const char **)&source_str, 
+												(const size_t *)&source_size, 
+												&f->error);
+	$CHECKERROR
+
+	// Build
+	f->error = clBuildProgram(	f->program2D, 1, &f->device, 
+								"-cl-nv-verbose", NULL, NULL);
+	clGetProgramBuildInfo(	f->program2D, f->device, CL_PROGRAM_BUILD_LOG, 
+							sizeof(buffer), buffer, NULL);
+	clGetProgramBuildInfo(	f->program2D, f->device, CL_PROGRAM_BUILD_LOG, 0, 
+							NULL, &ret_value_size);
+	register1 = realloc(register1, ret_value_size+1);
+	clGetProgramBuildInfo(	f->program2D, f->device, CL_PROGRAM_BUILD_LOG, 
+							ret_value_size, register1, NULL);
+	register1[ret_value_size] = '\0';
+	fprintf(stderr, "%s\n", register1);
+	#endif
+
 	#if 1 /* Prepare 3D Program */
 	char file3D[] = "/opt/topefft/kernels3D.cl";
 	fp = fopen(file3D, "r");

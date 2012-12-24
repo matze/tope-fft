@@ -1,23 +1,25 @@
 #pragma OPENCL EXTENSION cl_khr_fp64: enable
 
-__kernel void twiddles(__global double *twiddle, int size)
+#define CLPI 3.141592653589793238462643383279 // acos(-1)
+#define CLPT 6.283185307179586476925286766559 // acos(-1)*2
+#define d707 0.707106781186547524400844362104 // cos(acos(-1)/4)
+
+__kernel void twiddles(__global double2 *twiddle, int size)
 {
+	#if 1
 	int idX = get_global_id(0);
-	double CLPI = acos(-1.);
-	twiddle[2*idX] 	=  cos(2.*CLPI*idX/size);
-	twiddle[2*idX+1] = -sin(2.*CLPI*idX/size);
+	twiddle[idX] =  (double2)(cos(CLPT*idX/size),-sin(CLPT*idX/size));
+	#endif
 }
 
 __kernel void DIT8C2C(	__global double *data, 
-						__global double *twiddle,
+						__global double2 *twiddle,
 						const int x, const int y, 
-						const int stage, const int dir, const int type ) 
+						const int stage, const int dir, const int type) 
 {
 	int idX = get_global_id(0);
 	int idY = get_global_id(1);
 
-	double CLPI = acos(-1.);
-	
 	#if 1
 	int powMaxLvl = 4;
 	int powLevels = stage / powMaxLvl;
@@ -40,7 +42,7 @@ __kernel void DIT8C2C(	__global double *data,
 	int STRIDE 	= 1;
 
 	int yIndex, kIndex, red, coeffUse;
-	
+
 	switch(type)
 	{
 		case 1: BASE = idY*x; 
@@ -67,8 +69,6 @@ __kernel void DIT8C2C(	__global double *data,
 	int clipSev		= 2 * (BASE+STRIDE*(kIndex + yIndex * powX + 6 * powXm1));
 	int clipEig		= 2 * (BASE+STRIDE*(kIndex + yIndex * powX + 7 * powXm1));
 
-	double2 CST;
-	double2 TMP;
 	double16 SIGA = (double16)(	data[clipOne+0],data[clipOne+1],	// s0, s1
 								data[clipTwo+0],data[clipTwo+1],	// s2, s3
 								data[clipThr+0],data[clipThr+1],	// s4, s5
@@ -79,168 +79,112 @@ __kernel void DIT8C2C(	__global double *data,
 								data[clipEig+0],data[clipEig+1]);	// se, sf
 
 	
-	double2 clSet1;
+	double2 clSet1,TMP;
 	int quad = coeffUse/red;
 	int buad = coeffUse%red;
-	if (quad == 0) {
-		clSet1.x = twiddle[2*coeffUse];
-		clSet1.y = twiddle[2*coeffUse+1];
+	switch(quad) {
+		case 0: clSet1 = (double2)(	twiddle[buad].x, 	 twiddle[buad].y); break;
+		case 1: clSet1 = (double2)(	twiddle[buad].y,	-twiddle[buad].x); break;
+		case 2:	clSet1 = (double2)(-twiddle[buad].x,	-twiddle[buad].y); break;
 	}
-	else if (quad == 1) {
-		clSet1.x = twiddle[2*buad+1];
-		clSet1.y = -twiddle[2*buad];
-	}
-	else if (quad == 2) {
-		clSet1.x = -twiddle[2*buad];
-		clSet1.y = -twiddle[2*buad+1];
-	}
-	double2 clSet2;
-	quad = (2*coeffUse)/red;
-	buad = (2*coeffUse)%red;
-	if (quad == 0) {
-		clSet2.x = twiddle[2*2*coeffUse];
-		clSet2.y = twiddle[2*2*coeffUse+1];
-	}
-	else if (quad == 1) {
-		clSet2.x = twiddle[2*buad+1];
-		clSet2.y = -twiddle[2*buad];
-	}
-	else if (quad == 2) {
-		clSet2.x = -twiddle[2*buad];
-		clSet2.y = -twiddle[2*buad+1];
-	}
-	double2 clSet3;
-	quad = (3*coeffUse)/red;
-	buad = (3*coeffUse)%red;
-	if (quad == 0) {
-		clSet3.x = twiddle[2*3*coeffUse];
-		clSet3.y = twiddle[2*3*coeffUse+1];
-	}
-	else if (quad == 1) {
-		clSet3.x = twiddle[2*buad+1];
-		clSet3.y = -twiddle[2*buad];
-	}
-	else if (quad == 2) {
-		clSet3.x = -twiddle[2*buad];
-		clSet3.y = -twiddle[2*buad+1];
-	}
-	double2 clSet4;
-	quad = (4*coeffUse)/red;
-	buad = (4*coeffUse)%red;
-	if (quad == 0) {
-		clSet4.x = twiddle[2*4*coeffUse];
-		clSet4.y = twiddle[2*4*coeffUse+1];
-	}
-	else if (quad == 1) {
-		clSet4.x = twiddle[2*buad+1];
-		clSet4.y = -twiddle[2*buad];
-	}
-	else if (quad == 2) {
-		clSet4.x = -twiddle[2*buad];
-		clSet4.y = -twiddle[2*buad+1];
-	}
-
-	double2 clSet5;
-	quad = (5*coeffUse)/red;
-	buad = (5*coeffUse)%red;
-	if (quad == 0) {
-		clSet5.x = twiddle[2*5*coeffUse];
-		clSet5.y = twiddle[2*5*coeffUse+1];
-	}
-	else if (quad == 1) {
-		clSet5.x = twiddle[2*buad+1];
-		clSet5.y = -twiddle[2*buad];
-	}
-	else if (quad == 2) {
-		clSet5.x = -twiddle[2*buad];
-		clSet5.y = -twiddle[2*buad+1];
-	}
-
-	double2 clSet6;
-	quad = (6*coeffUse)/red;
-	buad = (6*coeffUse)%red;
-	if (quad == 0) {
-		clSet6.x = twiddle[2*6*coeffUse];
-		clSet6.y = twiddle[2*6*coeffUse+1];
-	}
-	else if (quad == 1) {
-		clSet6.x = twiddle[2*buad+1];
-		clSet6.y = -twiddle[2*buad];
-	}
-	else if (quad == 2) {
-		clSet6.x = -twiddle[2*buad];
-		clSet6.y = -twiddle[2*buad+1];
-	}
-
-	double2 clSet7;
-	quad = (7*coeffUse)/red;
-	buad = (7*coeffUse)%red;
-	if (quad == 0) {
-		clSet7.x = twiddle[2*7*coeffUse];
-		clSet7.y = twiddle[2*7*coeffUse+1];
-	}
-	else if (quad == 1) {
-		clSet7.x = twiddle[2*buad+1];
-		clSet7.y = -twiddle[2*buad];
-	}
-	else if (quad == 2) {
-		clSet7.x = -twiddle[2*buad];
-		clSet7.y = -twiddle[2*buad+1];
-	}
-	else if (quad == 3) {
-		clSet7.x = -twiddle[2*buad+1];
-		clSet7.y =  twiddle[2*buad];
-	}
-
-	if (dir == 0) {
-		clSet1.y *= -1;
-		clSet2.y *= -1;
-		clSet3.y *= -1;
-		clSet4.y *= -1;
-		clSet5.y *= -1;
-		clSet6.y *= -1;
-		clSet7.y *= -1;
-	}
-
+	if (dir == 0) clSet1.y *= -1;
 	if (kIndex != 0) {
-		TMP.x = SIGA.s2 * clSet4.x - SIGA.s3 * clSet4.y;
-		TMP.y = SIGA.s2 * clSet4.y + SIGA.s3 * clSet4.x;
-		SIGA.s2 = TMP.x;
-		SIGA.s3 = TMP.y;
-
-		TMP.x = SIGA.s4 * clSet2.x - SIGA.s5 * clSet2.y;
-		TMP.y = SIGA.s4 * clSet2.y + SIGA.s5 * clSet2.x;
-		SIGA.s4 = TMP.x;
-		SIGA.s5 = TMP.y;
-
-		TMP.x = SIGA.s6 * clSet6.x - SIGA.s7 * clSet6.y;
-		TMP.y = SIGA.s6 * clSet6.y + SIGA.s7 * clSet6.x;
-		SIGA.s6 = TMP.x;
-		SIGA.s7 = TMP.y;
-
 		TMP.x = SIGA.s8 * clSet1.x - SIGA.s9 * clSet1.y;
 		TMP.y = SIGA.s8 * clSet1.y + SIGA.s9 * clSet1.x;
 		SIGA.s8 = TMP.x;
 		SIGA.s9 = TMP.y;
+	}	
 
-		TMP.x = SIGA.sa * clSet5.x - SIGA.sb * clSet5.y;
-		TMP.y = SIGA.sa * clSet5.y + SIGA.sb * clSet5.x;
-		SIGA.sa = TMP.x;
-		SIGA.sb = TMP.y;
+	quad = (2*coeffUse)/red;
+	buad = (2*coeffUse)%red;
+	switch(quad) {
+		case 0: clSet1 = (double2)( twiddle[buad].x, 	 twiddle[buad].y); break;
+		case 1: clSet1 = (double2)( twiddle[buad].y,	-twiddle[buad].x); break;
+		case 2: clSet1 = (double2)(-twiddle[buad].x,	-twiddle[buad].y); break;
+	}
+	if (dir == 0) clSet1.y *= -1;
+	if (kIndex != 0) {
+		TMP.x = SIGA.s4 * clSet1.x - SIGA.s5 * clSet1.y;
+		TMP.y = SIGA.s4 * clSet1.y + SIGA.s5 * clSet1.x;
+		SIGA.s4 = TMP.x;
+		SIGA.s5 = TMP.y;
+	}	
 
-		TMP.x = SIGA.sc * clSet3.x - SIGA.sd * clSet3.y;
-		TMP.y = SIGA.sc * clSet3.y + SIGA.sd * clSet3.x;
+	quad = (3*coeffUse)/red;
+	buad = (3*coeffUse)%red;
+	switch(quad) {
+		case 0: clSet1 = (double2)( twiddle[buad].x, 	 twiddle[buad].y); break;
+		case 1: clSet1 = (double2)( twiddle[buad].y,	-twiddle[buad].x); break;
+		case 2: clSet1 = (double2)(-twiddle[buad].x,	-twiddle[buad].y); break;
+	}
+	if (dir == 0) clSet1.y *= -1;
+	if (kIndex != 0) {
+		TMP.x = SIGA.sc * clSet1.x - SIGA.sd * clSet1.y;
+		TMP.y = SIGA.sc * clSet1.y + SIGA.sd * clSet1.x;
 		SIGA.sc = TMP.x;
 		SIGA.sd = TMP.y;
-		
-		TMP.x = SIGA.se * clSet7.x - SIGA.sf * clSet7.y;
-		TMP.y = SIGA.se * clSet7.y + SIGA.sf * clSet7.x;
+	}	
+
+	quad = (4*coeffUse)/red;
+	buad = (4*coeffUse)%red;
+	switch(quad) {
+		case 0: clSet1 = (double2)( twiddle[buad].x, 	 twiddle[buad].y); break;
+		case 1: clSet1 = (double2)( twiddle[buad].y,	-twiddle[buad].x); break;
+		case 2: clSet1 = (double2)(-twiddle[buad].x,	-twiddle[buad].y); break;
+	}
+	if (dir == 0) clSet1.y *= -1;
+	if (kIndex != 0) {
+		TMP.x = SIGA.s2 * clSet1.x - SIGA.s3 * clSet1.y;
+		TMP.y = SIGA.s2 * clSet1.y + SIGA.s3 * clSet1.x;
+		SIGA.s2 = TMP.x;
+		SIGA.s3 = TMP.y;
+	}
+
+	quad = (5*coeffUse)/red;
+	buad = (5*coeffUse)%red;
+	switch(quad) {
+		case 0: clSet1 = (double2)( twiddle[buad].x, 	 twiddle[buad].y); break;
+		case 1: clSet1 = (double2)( twiddle[buad].y,	-twiddle[buad].x); break;
+		case 2: clSet1 = (double2)(-twiddle[buad].x,	-twiddle[buad].y); break;
+	}
+	if (dir == 0) clSet1.y *= -1;
+	if (kIndex != 0) {
+		TMP.x = SIGA.sa * clSet1.x - SIGA.sb * clSet1.y;
+		TMP.y = SIGA.sa * clSet1.y + SIGA.sb * clSet1.x;
+		SIGA.sa = TMP.x;
+		SIGA.sb = TMP.y;
+	}
+
+	quad = (6*coeffUse)/red;
+	buad = (6*coeffUse)%red;
+	switch(quad) {
+		case 0: clSet1 = (double2)( twiddle[buad].x, 	 twiddle[buad].y); break;
+		case 1: clSet1 = (double2)( twiddle[buad].y,	-twiddle[buad].x); break;
+		case 2: clSet1 = (double2)(-twiddle[buad].x,	-twiddle[buad].y); break;
+	}
+	if (dir == 0) clSet1.y *= -1;
+	if (kIndex != 0) {
+		TMP.x = SIGA.s6 * clSet1.x - SIGA.s7 * clSet1.y;
+		TMP.y = SIGA.s6 * clSet1.y + SIGA.s7 * clSet1.x;
+		SIGA.s6 = TMP.x;
+		SIGA.s7 = TMP.y;
+	}	
+
+	quad = (7*coeffUse)/red;
+	buad = (7*coeffUse)%red;
+	switch(quad) {
+		case 0: clSet1 = (double2)( twiddle[buad].x, 	 twiddle[buad].y); break;
+		case 1: clSet1 = (double2)( twiddle[buad].y,	-twiddle[buad].x); break;
+		case 2: clSet1 = (double2)(-twiddle[buad].x,	-twiddle[buad].y); break;
+		case 3: clSet1 = (double2)(-twiddle[buad].y,	 twiddle[buad].x); break;
+	}
+	if (dir == 0) clSet1.y *= -1;
+	if (kIndex != 0) {
+		TMP.x = SIGA.se * clSet1.x - SIGA.sf * clSet1.y;
+		TMP.y = SIGA.se * clSet1.y + SIGA.sf * clSet1.x;
 		SIGA.se = TMP.x;
 		SIGA.sf = TMP.y;
 	}	
-
-	double tmp;
-	double d707 = cos(CLPI/4.);
 
 	double16 SIGB = (double16)(	SIGA.s0 + SIGA.s2,
 								SIGA.s1 + SIGA.s3,
@@ -260,22 +204,20 @@ __kernel void DIT8C2C(	__global double *data,
 								SIGA.sd - SIGA.sf);
 
 	if (dir == 1) {
-		tmp 	= (SIGB.sa + SIGB.sb) * d707;
+		TMP = (double2)((SIGB.sa + SIGB.sb)*d707, (SIGB.sf - SIGB.se)*d707);
 		SIGB.sb = (SIGB.sb - SIGB.sa) * d707;
-		SIGB.sa = tmp;	
-		tmp 	= (SIGB.sf - SIGB.se) * d707;
 		SIGB.sf = (SIGB.sf + SIGB.se) * -d707;
-		SIGB.se = tmp;
-		tmp 	= SIGB.s7; SIGB.s7 = -SIGB.s6; SIGB.s6 = tmp; 
+		SIGB.sa = TMP.x;	
+		SIGB.se = TMP.y;
+		TMP.x	= SIGB.s7; SIGB.s7 = -SIGB.s6; SIGB.s6 = TMP.x; 
 	}
 	else if (dir == 0) {
-		tmp 	= (SIGB.sa - SIGB.sb) * d707;
+		TMP = (double2)((SIGB.sa - SIGB.sb)*d707, (SIGB.sf + SIGB.se)*-d707);
 		SIGB.sb = (SIGB.sb + SIGB.sa) * d707;
-		SIGB.sa = tmp;
-		tmp 	= (SIGB.sf + SIGB.se) * -d707;
 		SIGB.sf = (SIGB.se - SIGB.sf) * d707;
-		SIGB.se = tmp;
-		tmp 	= -SIGB.s7; SIGB.s7 = SIGB.s6; SIGB.s6 = tmp;
+		SIGB.sa = TMP.x;
+		SIGB.se = TMP.y;
+		TMP.x 	= -SIGB.s7; SIGB.s7 = SIGB.s6; SIGB.s6 = TMP.x;
 	}
 
 	SIGA.s0 = SIGB.s0 + SIGB.s4;
@@ -346,29 +288,27 @@ __kernel void DIT8C2C(	__global double *data,
 }
 
 __kernel void DIT4C2C(	__global double *data, 
-						__global double *twiddle,
+						__global double2 *twiddle,
 						const int x, const int y,
 						const int stage, const int dir, const int type ) 
 {
 	int idX = get_global_id(0);
 	int idY = get_global_id(1);
 
-	double CLPI = acos(-1.);
-	
-	#if 0
-	int powMaxLvl = 11;
+	#if 1
+	int powMaxLvl = 7;
 	int powLevels = stage / powMaxLvl;
 	int powRemain = stage % powMaxLvl;
 	int powX = 1;
 	int powXm1 = 1;
-	int x;
-	for (x = 0; x < powLevels; x++) {
+	int xx;
+	for (xx = 0; xx < powLevels; xx++) {
 		powX *= pow(4.0f,powMaxLvl);
 	}
 	powX *= pow(4.0f,powRemain);
 	powXm1 = powX/4;
 	#endif
-	#if 1
+	#if 0
 	int powX = exp2(log2(4.)*stage);
 	int powXm1 = powX/4;
 	#endif
@@ -407,100 +347,74 @@ __kernel void DIT4C2C(	__global double *data,
 
 
 	int quad, buad;
-	double2 TEMPC;
+	double2 TEMPC, clSet1;
 
-	double2 clSet1;
+	#if 1
 	quad = coeffUse / red;
 	buad = coeffUse % red;
 	switch(quad) {
-		case 0:	clSet1.x = twiddle[2*coeffUse];
-				clSet1.y = twiddle[2*coeffUse+1];
-				break;
-		case 1: clSet1.x = twiddle[2*buad+1];
-				clSet1.y = -twiddle[2*buad];
-				break;
-		case 2:	clSet1.x = -twiddle[2*buad];
-				clSet1.y = -twiddle[2*buad+1];
-				break;
-		case 3:	clSet1.x = -twiddle[2*buad+1];
-				clSet1.y =  twiddle[2*buad];
-				break;
+		case 0:	clSet1 = (double2)( twiddle[buad].x,  twiddle[buad].y); break;
+		case 1: clSet1 = (double2)( twiddle[buad].y, -twiddle[buad].x); break;
+		case 2:	clSet1 = (double2)(-twiddle[buad].x, -twiddle[buad].y); break;
+		case 3:	clSet1 = (double2)(-twiddle[buad].y,  twiddle[buad].x); break;
 	}
-
-	double2 clSet2;
-	quad = (2*coeffUse) / red;
-	buad = (2*coeffUse) % red;
-	switch(quad) {
-		case 0:	clSet2.x = twiddle[2*2*coeffUse];
-				clSet2.y = twiddle[2*2*coeffUse+1];
-				break;
-		case 1:	clSet2.x = twiddle[2*buad+1];
-				clSet2.y = -twiddle[2*buad];
-				break;
-		case 2:	clSet2.x = -twiddle[2*buad];
-				clSet2.y = -twiddle[2*buad+1];
-				break;
-		case 3:	clSet2.x = -twiddle[2*buad+1];
-				clSet2.y =  twiddle[2*buad];
-				break;
-	}
-
-	double2 clSet3;
-	quad = (3*coeffUse) / red;
-	buad = (3*coeffUse) % red;
-	switch(quad) {
-		case 0:	clSet3.x = twiddle[2*3*coeffUse];
-				clSet3.y = twiddle[2*3*coeffUse+1];
-				break;
-		case 1: clSet3.x = twiddle[2*buad+1];
-				clSet3.y = -twiddle[2*buad];
-				break;
-		case 2: clSet3.x = -twiddle[2*buad];
-				clSet3.y = -twiddle[2*buad+1];
-				break;
-		case 3: clSet3.x = -twiddle[2*buad+1];
-				clSet3.y =  twiddle[2*buad];
-				break;
-	}
-	
-	if (dir == 0) {
-		clSet1.y *= -1;
-		clSet2.y *= -1;
-		clSet3.y *= -1;
-	}
-
-	#if 1
-	TEMPC.x = SIGA.s2 * clSet2.x - SIGA.s3 * clSet2.y;
-	TEMPC.y = SIGA.s3 * clSet2.x + SIGA.s2 * clSet2.y;
-	SIGA.s2 = TEMPC.x;
-	SIGA.s3 = TEMPC.y;
-		
-	TEMPC.x = SIGA.s4 * clSet1.x - SIGA.s5 * clSet1.y;
-	TEMPC.y = SIGA.s5 * clSet1.x + SIGA.s4 * clSet1.y;
-	SIGA.s4 = TEMPC.x;
-	SIGA.s5 = TEMPC.y;
-
-	TEMPC.x = SIGA.s6 * clSet3.x - SIGA.s7 * clSet3.y;
-	TEMPC.y = SIGA.s7 * clSet3.x + SIGA.s6 * clSet3.y;
-	SIGA.s6 = TEMPC.x;
-	SIGA.s7 = TEMPC.y;
-	#endif
-	#if 0
+	if (dir == 0) clSet1.y *= -1;
 	if (kIndex != 0) {
-		//clSet2.x = cos(2.*2.*CLPI*kIndex/powX);
-		//clSet2.y = -sin(2.*2.*CLPI*kIndex/powX);
-		TEMPC.x = SIGA.s2 * clSet2.x - SIGA.s3 * clSet2.y;
-		TEMPC.y = SIGA.s3 * clSet2.x + SIGA.s2 * clSet2.y;
-		SIGA.s2 = TEMPC.x;
-		SIGA.s3 = TEMPC.y;
-		//clSet1.x = cos(2.*CLPI*kIndex/powX);
-		//clSet1.y = -sin(2.*CLPI*kIndex/powX);
 		TEMPC.x = SIGA.s4 * clSet1.x - SIGA.s5 * clSet1.y;
 		TEMPC.y = SIGA.s5 * clSet1.x + SIGA.s4 * clSet1.y;
 		SIGA.s4 = TEMPC.x;
 		SIGA.s5 = TEMPC.y;
-		//clSet3.x = cos(3.*2.*CLPI*kIndex/powX);
-		//clSet3.y = -sin(3.*2.*CLPI*kIndex/powX);
+	}
+
+	quad = (2*coeffUse) / red;
+	buad = (2*coeffUse) % red;
+	switch(quad) {
+		case 0:	clSet1 = (double2)( twiddle[buad].x,  twiddle[buad].y); break;
+		case 1: clSet1 = (double2)( twiddle[buad].y, -twiddle[buad].x); break;
+		case 2:	clSet1 = (double2)(-twiddle[buad].x, -twiddle[buad].y); break;
+		case 3:	clSet1 = (double2)(-twiddle[buad].y,  twiddle[buad].x); break;
+	}
+	if (dir == 0) clSet1.y *= -1;
+	if (kIndex != 0) {
+		TEMPC.x = SIGA.s2 * clSet1.x - SIGA.s3 * clSet1.y;
+		TEMPC.y = SIGA.s3 * clSet1.x + SIGA.s2 * clSet1.y;
+		SIGA.s2 = TEMPC.x;
+		SIGA.s3 = TEMPC.y;
+	}
+
+	quad = (3*coeffUse) / red;
+	buad = (3*coeffUse) % red;
+	switch(quad) {
+		case 0:	clSet1 = (double2)( twiddle[buad].x,  twiddle[buad].y); break;
+		case 1: clSet1 = (double2)( twiddle[buad].y, -twiddle[buad].x); break;
+		case 2:	clSet1 = (double2)(-twiddle[buad].x, -twiddle[buad].y); break;
+		case 3:	clSet1 = (double2)(-twiddle[buad].y,  twiddle[buad].x); break;
+	}
+	if (dir == 0) clSet1.y *= -1;
+	if (kIndex != 0) {	
+		TEMPC.x = SIGA.s6 * clSet1.x - SIGA.s7 * clSet1.y;
+		TEMPC.y = SIGA.s7 * clSet1.x + SIGA.s6 * clSet1.y;
+		SIGA.s6 = TEMPC.x;
+		SIGA.s7 = TEMPC.y;
+	}
+	#endif
+	#if 0
+	double2 clSet2, clSet3;
+	if (kIndex != 0) {
+		clSet2.x =  cos(2.*CLPT*kIndex/powX);
+		clSet2.y = -sin(2.*CLPT*kIndex/powX);
+		TEMPC.x = SIGA.s2 * clSet2.x - SIGA.s3 * clSet2.y;
+		TEMPC.y = SIGA.s3 * clSet2.x + SIGA.s2 * clSet2.y;
+		SIGA.s2 = TEMPC.x;
+		SIGA.s3 = TEMPC.y;
+		clSet1.x = cos(CLPT*kIndex/powX);
+		clSet1.y = -sin(CLPT*kIndex/powX);
+		TEMPC.x = SIGA.s4 * clSet1.x - SIGA.s5 * clSet1.y;
+		TEMPC.y = SIGA.s5 * clSet1.x + SIGA.s4 * clSet1.y;
+		SIGA.s4 = TEMPC.x;
+		SIGA.s5 = TEMPC.y;
+		clSet3.x = cos(3.*CLPT*kIndex/powX);
+		clSet3.y = -sin(3.*CLPT*kIndex/powX);
 		TEMPC.x = SIGA.s6 * clSet3.x - SIGA.s7 * clSet3.y;
 		TEMPC.y = SIGA.s7 * clSet3.x + SIGA.s6 * clSet3.y;
 		SIGA.s6 = TEMPC.x;
@@ -543,101 +457,78 @@ __kernel void DIT4C2C(	__global double *data,
 
 
 __kernel void DIT2C2C(	__global double *data, 
-						__global double *twiddle,
+						__global double2 *twiddle,
 						const int x, const int y,
 						const int stage, const int dir, const int type ) 
 {
 	int idX = get_global_id(0);
 	int idY = get_global_id(1);
 
-	double CLPI = acos(-1.);
 	int BASE 	= 0;
 	int STRIDE 	= 1;
 
-	#if 0
+	#if 1
 	int powMaxLvl = 11;
-	int powLevels = level1GPU / powMaxLvl;
-	int powRemain = level1GPU % powMaxLvl;
+	int powLevels = stage / powMaxLvl;
+	int powRemain = stage % powMaxLvl;
 	int powX = 1;
 	int powXm1 = 1;
-	int x;
-	for (x = 0; x < powLevels; x++) {
+	int xx;
+	for (xx = 0; xx < powLevels; xx++) {
 		powX *= pow(2.0f,powMaxLvl);
 	}
 	powX *= pow(2.0f,powRemain);
 	powXm1 = powX/2;
 	#endif
-	#if 1
+	#if 0
 	int powX = exp2(log2(2.)*stage);
 	int powXm1 = powX/2;
 	#endif
 
 	int yIndex, kIndex, clipStart, clipEnd, coeffUse, red, quad, buad;
-	double2 CLCOSSIN;
+	double2 clSet1;
 	
 	switch(type)
 	{
 		case 1: BASE 		= idY*x; 
 				yIndex 		= idX / powXm1;
 				kIndex 		= idX % powXm1;	
-				clipStart 	= 2 * (BASE+STRIDE*(kIndex + yIndex * powX));
-				clipEnd 	= 2 * (BASE+STRIDE*(kIndex + yIndex * powX + powXm1));
 				coeffUse 	= kIndex * (x / powX);
-				#if 1
-				red = x/4;
-				quad = coeffUse/red;
-				buad = coeffUse%red;
-				switch(quad)
-				{
-					case 0:	CLCOSSIN.x = twiddle[2*coeffUse];
-							CLCOSSIN.y = twiddle[2*coeffUse+1]; break;
-					case 1: CLCOSSIN.x = twiddle[2*buad+1];
-							CLCOSSIN.y = -twiddle[2*buad];		break;
-					case 2:	CLCOSSIN.x = -twiddle[2*buad];
-							CLCOSSIN.y = -twiddle[2*buad+1];	break;
-				}
-				if (dir == 0) CLCOSSIN.y *= -1;
-				#endif
-				#if 0
-				CLCOSSIN.x 	= cos(two*CLPI*(coeffUse/2)/xR);
-				CLCOSSIN.y 	= sin(two*CLPI*(coeffUse/2)/xR);
-				#endif
+				red 		= x/4;
 				break;
 		case 2: BASE 		= idX; 
 				STRIDE 		= x; 
 				yIndex 		= idY / powXm1;
 				kIndex 		= idY % powXm1;
-				clipStart 	= 2 * (BASE+STRIDE*(kIndex + yIndex * powX));
-				clipEnd 	= 2 * (BASE+STRIDE*(kIndex + yIndex * powX + powXm1));
 				coeffUse 	= kIndex * (y / powX);
-				#if 1
 				red  = y/4;
-				quad = coeffUse/red;
-				buad = coeffUse%red;
-				switch(quad)
-				{
-					case 0:	CLCOSSIN.x = twiddle[2*coeffUse];
-							CLCOSSIN.y = twiddle[2*coeffUse+1]; break;
-					case 1: CLCOSSIN.x = twiddle[2*buad+1];
-							CLCOSSIN.y = -twiddle[2*buad];		break;
-					case 2:	CLCOSSIN.x = -twiddle[2*buad];
-							CLCOSSIN.y = -twiddle[2*buad+1];	break;
-				}
-				if (dir == 0) CLCOSSIN.y *= -1;
-				#endif
-				#if 0
-				CLCOSSIN.x 	= cos(two*CLPI*(coeffUse/2)/yR);
-				CLCOSSIN.y 	= sin(two*CLPI*(coeffUse/2)/yR);
-				#endif
 				break;
 	}
 
+	clipStart 	= 2 * (BASE+STRIDE*(kIndex + yIndex * powX));
+	clipEnd 	= 2 * (BASE+STRIDE*(kIndex + yIndex * powX + powXm1));
+
+	quad = coeffUse/red;
+	buad = coeffUse%red;
+
+	switch(quad) {
+		case 0:	clSet1 = (double2)( twiddle[buad].x,  twiddle[buad].y); break;
+		case 1: clSet1 = (double2)( twiddle[buad].y, -twiddle[buad].x); break;
+		case 2:	clSet1 = (double2)(-twiddle[buad].x, -twiddle[buad].y); break;
+		case 3:	clSet1 = (double2)(-twiddle[buad].y,  twiddle[buad].x); break;
+	}
+	if (dir == 0) clSet1.y *= -1;
+	#if 0
+	clSet1.x 	= cos(two*CLPI*(coeffUse/2)/xR);
+	clSet1.y 	= sin(two*CLPI*(coeffUse/2)/xR);
+	#endif
+
 	double4 LOC = (double4)(	data[clipStart + 0],	data[clipStart + 1],
 								data[clipEnd + 0],		data[clipEnd + 1]);
-	double4 FIN = (double4)(	LOC.x + LOC.z * CLCOSSIN.x - LOC.w * CLCOSSIN.y,
-								LOC.y + LOC.w * CLCOSSIN.x + LOC.z * CLCOSSIN.y,
-								LOC.x - LOC.z * CLCOSSIN.x + LOC.w * CLCOSSIN.y,
-								LOC.y - LOC.w * CLCOSSIN.x - LOC.z * CLCOSSIN.y);
+	double4 FIN = (double4)(	LOC.x + LOC.z * clSet1.x - LOC.w * clSet1.y,
+								LOC.y + LOC.w * clSet1.x + LOC.z * clSet1.y,
+								LOC.x - LOC.z * clSet1.x + LOC.w * clSet1.y,
+								LOC.y - LOC.w * clSet1.x - LOC.z * clSet1.y);
 
 	data[clipStart + 0] = FIN.x;
 	data[clipStart + 1] = FIN.y;

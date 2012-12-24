@@ -1,27 +1,26 @@
 set -e
 
-#echo "3D Tests"
-#----------- Radix 2
+echo "3D Tests Horizontal"
+for j in 4 8 16 32 64 128 256 512 1024 2048 4096 8192 16384 32768 65536 131072 262144 524288 1048576
+do
+	bin/3d $j 4 4 2> /dev/null
+done
 
-for j in 4 8 16 32 64
+echo "3D Tests Vertical"
+for j in 4 8 16 32 64 128 256 512 1024 2048 4096 8192 16384 32768 65536 131072 262144 524288 1048576
+do
+	bin/3d 4 $j 4 2> /dev/null
+done
+
+echo "3D Tests Planar"
+for j in 4 8 16 32 64 128 256 512 1024 2048 
+do
+	bin/3d $j $j 4 2> /dev/null
+done
+
+echo "3D Tests Cubic"
+for j in 4 8 16 32 64 
 do
 	bin/3d $j $j $j 2> /dev/null
 done
 
-#----------- Radix 4
-#for j in 12 
-#do
-#	bin/1d $(( 4 ** $j )) 2> /dev/null
-#done
-
-#----------- Radix 8
-#for j in 8
-#do
-#	bin/1d $(( 8 ** $j )) 2> /dev/null
-#done
-
-#holdMax=1000
-#for (( j = 10 ; j <= 1000; j+=10 )) 
-#do
-#	./a.out 8388608 1 1 300 uniform uniform $j no 2> /dev/null     
-#done

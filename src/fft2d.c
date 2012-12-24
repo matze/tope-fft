@@ -17,11 +17,11 @@ void tope2DExecX(	struct topeFFT *f,
 	$CHECKERROR
 	f->error = clSetKernelArg(t->kernel_swap, 5, sizeof(int), (void*)&type);
 	$CHECKERROR
-	
+
 	/* Run Swapper */	
 	t->globalSize[0] = t->x;
 	t->globalSize[1] = t->y;
-	t->localSize[0] = t->x < 128 ? t->x/2 : 128;
+	t->localSize[0] = t->x < 64 ? t->x/2 : 64;
 	t->localSize[1] = 1;
 	f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernel_swap,
 										t->dim, NULL, t->globalSize,
@@ -35,7 +35,7 @@ void tope2DExecX(	struct topeFFT *f,
 	t->localSize[1] = 1;
 	if (t->radX==8) {
 		t->globalSize[0] = t->x/8;
-		t->localSize[0] = t->x/8 < 128 ? t->x/8 : 128;
+		t->localSize[0] = t->x/8 < 64 ? t->x/8 : 64;
 	}
 	else if(t->radX==4) {
 		t->globalSize[0] = t->x/4;

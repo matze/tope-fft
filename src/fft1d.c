@@ -227,6 +227,7 @@ void tope1DPlanInit(struct topeFFT *f,
 
 	/* Swapping Kernel Setup*/
 	t->kernel_swap = clCreateKernel(f->program1D, "swap1D", &f->error);
+	clCreateKernelChecker(&f->error);
 	$CHECKERROR
 	f->error = clSetKernelArg(	t->kernel_swap,1,sizeof(cl_mem),
 								(void*)&t->bitrev); $CHECKERROR

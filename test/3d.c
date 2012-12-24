@@ -207,22 +207,14 @@ int main(int argc, char *argv[])
 	#endif
 
 	#if 1
-	printf("%d.%d.%d\tPRE:%f\tKER:%f\tTOT:%f\tFTW:%f\tCUD:%f\n", 	
-									NX,NY,NZ, 
-									((double)1.0e-9)*(plan.totalPreKernel), 
-									((double)1.0e-9)*(plan.totalKernel), 
+	printf("%d.%d.%d\t%f\t%f\t%f\n", 	
+									(int)log2(NX),(int)log2(NY),(int)log2(NZ), 
 									((double)1.0e-9)*(	plan.totalKernel	+
 														plan.totalPreKernel), 
 									t_ns*1.0e-9, cuTime*10e-3);
 	#endif
 	#if 0
 	plotInGnuplot(data, out, dataLoca, NX*NY*NZ);
-	#endif
-	#if 0
-	printf("%d.%d.%d\t%f\t%f\t%f\n", 	NX,NY,NZ, 
-										((double)1.0e-9)*(plan.totalKernel	+
-										plan.totalPreKernel), 
-										t_ns*1.0e-9, cuTime*10e-3);
 	#endif
 	return 0;
 }

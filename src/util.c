@@ -64,6 +64,81 @@ void topeFFTInit(struct topeFFT *f)
 											&f->error);
 	$CHECKERROR
 
+	#if 0
+	#if 1 //1D
+	FILE *fp; 
+	char *source_buf;
+	size_t source_size;
+	char fileName[] = "/opt/topefft/kernels1D.ptx";
+	fp = fopen(fileName, "r");
+	if (!fp) {
+		fprintf(stderr, "Failed to load kernels. Check path.\n");
+		exit(1);
+	}
+	source_buf = (char*)malloc(MAX_BINARY_SIZE);
+	source_size = fread(source_buf, 1, MAX_BINARY_SIZE, fp);
+	fclose(fp);
+	cl_int bin_status;
+	f->program1D = clCreateProgramWithBinary(	f->context, 1, &f->device,
+												(const size_t *)&source_size, 
+												(const unsigned char **)&source_buf,
+												&bin_status, &f->error);
+	$CHECKERROR
+
+	char buffer[2048];
+	f->error = clBuildProgram(f->program1D, 1, &f->device, 
+								"-cl-nv-verbose", NULL, NULL);
+	clGetProgramBuildInfo(	f->program1D, f->device, CL_PROGRAM_BUILD_LOG, 
+							sizeof(buffer), buffer, NULL);
+	$CHECKERROR
+	#endif
+
+	#if 1 //2D
+	char file2D[] = "/opt/topefft/kernels2D.ptx";
+	fp = fopen(file2D, "r");
+	if (!fp) {
+		fprintf(stderr, "Failed to load kernels. Check path.\n");
+		exit(1);
+	}
+	source_size = fread(source_buf, 1, MAX_BINARY_SIZE, fp);
+	fclose(fp);
+	f->program2D = clCreateProgramWithBinary(	f->context, 1, &f->device,
+												(const size_t *)&source_size, 
+												(const unsigned char **)&source_buf,
+												&bin_status, &f->error);
+	$CHECKERROR
+	f->error = clBuildProgram(f->program2D, 1, &f->device, 
+								"-cl-nv-verbose", NULL, NULL);
+	clGetProgramBuildInfo(	f->program2D, f->device, CL_PROGRAM_BUILD_LOG, 
+							sizeof(buffer), buffer, NULL);
+	clBuildProgramChecker(&f->error, buffer);
+	$CHECKERROR
+	#endif
+	
+	#if 1
+	char file3D[] = "/opt/topefft/kernels3D.ptx";
+	fp = fopen(file3D, "r");
+	if (!fp) {
+		fprintf(stderr, "Failed to load kernels. Check path.\n");
+		exit(1);
+	}
+	source_size = fread(source_buf, 1, MAX_BINARY_SIZE, fp);
+	fclose(fp);
+	f->program3D = clCreateProgramWithBinary(	f->context, 1, &f->device,
+												(const size_t *)&source_size, 
+												(const unsigned char **)&source_buf,
+												&bin_status, &f->error);
+	$CHECKERROR
+	f->error = clBuildProgram(f->program3D, 1, &f->device, 
+								"-cl-nv-verbose", NULL, NULL);
+	clGetProgramBuildInfo(	f->program3D, f->device, CL_PROGRAM_BUILD_LOG, 
+							sizeof(buffer), buffer, NULL);
+	$CHECKERROR
+	#endif
+
+	#endif
+
+	#if 1
 	#if 1 /* Prepare 1D Program */
 	// CL File		
 	FILE *fp; 
@@ -156,6 +231,7 @@ void topeFFTInit(struct topeFFT *f)
 							ret_value_size, register1, NULL);
 	register1[ret_value_size] = '\0';
 	fprintf(stderr, "%s\n", register1);
+	#endif
 	#endif
 }
 

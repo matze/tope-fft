@@ -14,6 +14,8 @@ topeFFT: $(REQ)
 	$(CC) $(CFLAGS) -c -o obj/fft3d.o src/fft3d.c $(LDFLAGS)
 	$(CC) $(CFLAGS) -c -o obj/checkers.o src/checkers.c $(LDFLAGS)
 	$(CC) -shared -Wl,-soname,libTopeFFT.so.1 -o lib/libTopeFFT.so.1.0 $(OBJ)
+	$(CC) $(CFLAGS) -o bin/topeFFT_cc src/topeFFT_cc.c $(LDFLAGS)
+	bin/topeFFT_cc
 
 tests:
 	$(CC) $(CFLAGS) -lrt $(CUDAFLAGS) test/1d.c -o bin/1d $(LDTEST)
@@ -22,9 +24,7 @@ tests:
 
 install:
 	mkdir -p /opt/topefft
-	cp src/kernels1D.cl /opt/topefft
-	cp src/kernels2D.cl /opt/topefft
-	cp src/kernels3D.cl /opt/topefft
+	cp src/kernels* /opt/topefft
 	cp lib/libTopeFFT.so.1.0 /opt/topefft/libTopeFFT.so.1.0
 	ln -sf /opt/topefft/libTopeFFT.so.1.0 /opt/topefft/libTopeFFT.so.1
 	ln -sf /opt/topefft/libTopeFFT.so.1.0 /opt/topefft/libTopeFFT.so
@@ -36,6 +36,8 @@ clean:
 	@rm -f .sw*
 	@rm -f .*sw*
 	@rm -f src/.sw*
+	@rm -f src/kern*.ptx
+	
 
 
 

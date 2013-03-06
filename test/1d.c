@@ -78,12 +78,6 @@ int main(int argc, char *argv[])
 	tope1DPlanInit(&framework, &plan, N, C2C, data);
 	tope1DExec(&framework, &plan, data, FORWARD);
 
-	#if 0 // Show Output
-	for (i = 0; i < N; i++) {
-		printf("%lf:%lf\n", data[2*i], data[2*i+1]);
-	}
-	#endif
-
 	#if 0 // Start Inverse
 	tope1DExec(&framework, &plan, data, INVERSE);
 	#if 1 // Show Output
@@ -113,12 +107,6 @@ int main(int argc, char *argv[])
 	double t_ns = (double)(end.tv_sec - start.tv_sec) * 1.0e9 + (double)(end.tv_nsec - start.tv_nsec);
 
 	fftw_destroy_plan(p);
-
-	#if 0 // Show Output
-	for (i = 0; i < N; i++) {
-		printf("%lf:%lf\n", out[i][0], out[i][1]);
-	}
-	#endif
 	#endif
 
 	#if 1 /* Cuda FFT Starts */
@@ -146,11 +134,6 @@ int main(int argc, char *argv[])
 	cudaMemcpy(dataLoca, dataCuda, sizeof(cufftDoubleComplex)*N, cudaMemcpyDeviceToHost);
 	cufftDestroy(cudaPlan);
 	cudaFree(dataCuda);
-	#if 0 // Show Output
-	for (i = 0; i < N; i++) {
-		printf("%lf:%lf\n", dataLoca[i].x, dataLoca[i].y);
-	}
-	#endif
 	#endif
 
 	#if 1
@@ -160,9 +143,17 @@ int main(int argc, char *argv[])
 									t_ns*1.0e-9, cuTime*10e-3);
 	#endif
 	#if 0
-	plotInGnuplot(data, out, dataLoca, NX*NY*NZ);
+	plotInGnuplot(data, out, dataLoca, N);
 	#endif
 	
+	#if 1 // Show Output
+	for (i = 0; i < N; i++) {
+		printf("%lf\t%lf\n", data[2*i], data[2*i+1]); 	// Tope
+		//printf("%lf:%lf\t", out[i][0], out[i][1]); 		// FFTW
+		//printf("%lf:%lf\n", dataLoca[i].x, dataLoca[i].y); // cuFFT
+	}
+	#endif
+
 	return 0; 
 }
 

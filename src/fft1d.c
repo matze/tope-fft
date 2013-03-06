@@ -27,22 +27,32 @@ void tope1DExec(	struct topeFFT *f,
 		return;
 	}
 
-	/* Set Direction of Transform */
-	f->error = clSetKernelArg(t->kernel, 4, sizeof(int), (void*)&dir);
-	$CHECKERROR
+	if (t->radix > 0) {
+		/* Set Direction of Transform */
+		f->error = clSetKernelArg(t->kernel, 4, sizeof(int), (void*)&dir);
+		$CHECKERROR
 
-	/* Run Swapper */	
-	f->error = clSetKernelArg(t->kernel_swap,0,sizeof(cl_mem), (void*)&t->data);
-	$CHECKERROR
-
-	t->globalSize[0] = t->x;
-	t->localSize[0] = t->x < 128 ? t->x/2 : 128;
-	f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernel_swap,
+		/* Run Swapper */	
+		f->error = clSetKernelArg(t->kernel_swap,0,sizeof(cl_mem), (void*)&t->data);
+		$CHECKERROR
+		
+		t->globalSize[0] = t->x;
+		t->localSize[0] = t->x < 128 ? t->x/2 : 128;
+		f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernel_swap,
 											t->dim, NULL, t->globalSize,
 											t->localSize, 0, NULL, &f->event);
-	$CHECKERROR
-	clFinish(f->command_queue);
-	t->totalPreKernel += profileThis(f->event);
+
+		printf("%d\n", t->radix);
+
+		$CHECKERROR
+		clFinish(f->command_queue);
+		t->totalPreKernel += profileThis(f->event);
+	}
+	else {
+		/* Set Direction of Transform */
+		f->error = clSetKernelArg(t->kernel, 3, sizeof(int), (void*)&dir);
+		$CHECKERROR
+	}
 
 	#if 0 // Debug Code
 	int i;
@@ -60,41 +70,78 @@ void tope1DExec(	struct topeFFT *f,
 		t->globalSize[0] = (t->x)/8;
 		t->localSize[0] = ((t->x)/8) < 128 ? (t->x)/8 : 128;
 	}
-	else {
-		if(t->radix==4) {
-			t->globalSize[0] = (t->x)/4;
-			t->localSize[0] = ((t->x)/4) < 128 ? (t->x)/4 : 128;
-		}
-		else { 
-			if(t->radix==2){
-				t->globalSize[0] = (t->x)/2;
-				t->localSize[0] = ((t->x)/2) < 128 ? (t->x)/2 : 128;
-			}
-		}
+	else if(t->radix==4) {
+		t->globalSize[0] = (t->x)/4;
+		t->localSize[0] = ((t->x)/4) < 128 ? (t->x)/4 : 128;
+	}
+	else if(t->radix==2){
+		t->globalSize[0] = (t->x)/2;
+		t->localSize[0] = ((t->x)/2) < 128 ? (t->x)/2 : 128;
+	}
+	else if (t->radix == -1) {
+		t->globalSize[0] = t->x;
+		t->localSize[0] = t->x < 512 ? t->x : t->x % 2 == 0 ? 2 : 1;
 	}
 
-	int x;
-	for (x = 1; x <= t->log; x++) {
-		f->error = clSetKernelArg(t->kernel, 3, sizeof(int), (void*)&x);
-		$CHECKERROR
+	int x, remain, loop_start;
 
-		f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernel,
-											t->dim, NULL, t->globalSize,
-											t->localSize, 0, NULL, &f->event);
-		$CHECKERROR
-		clFinish(f->command_queue);
-		t->totalKernel += profileThis(f->event);
+	switch(t->radix)
+	{
+		case 8:
+		case 4:
+		case 2:
+		for (x = 1; x <= t->log; x++) {
+			f->error = clSetKernelArg(t->kernel, 3, sizeof(int), (void*)&x);
+			$CHECKERROR
 
-		#if 0 // Debug Code
+			f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernel,
+												t->dim, NULL, t->globalSize,
+												t->localSize, 0, NULL, &f->event);
+			$CHECKERROR
+			clFinish(f->command_queue);
+			t->totalKernel += profileThis(f->event);
+
+			#if 0 // Debug Code
 			int i;
 			f->error = clEnqueueReadBuffer(	f->command_queue, t->data,
-										CL_TRUE, 0, t->dataSize, d, 
-										0, NULL, &f->event);
+											CL_TRUE, 0, t->dataSize, d, 
+											0, NULL, &f->event);
 			$CHECKERROR
 			for (i = 0; i < t->x; i++) {
 				printf("%lf:%lf\n", d[2*i], d[2*i+1]);
 			}
-		#endif
+			#endif
+		}
+		break;
+		case -1: // DFT Case
+			remain = t->x; 
+			loop_start = 0;
+			f->error = clSetKernelArg(	t->kernel, 4, sizeof(int), 
+										(void*)&loop_start);		$CHECKERROR
+
+			f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernel,
+												t->dim, NULL, t->globalSize,
+												t->localSize, 0, NULL, &f->event);
+			$CHECKERROR
+			clFinish(f->command_queue);
+			t->totalKernel += profileThis(f->event);
+			if (remain > 128) remain = (remain-loop_start) % 128;
+			
+			/* Put following in loop */
+			loop_start = t->x-remain;
+			printf("%d and %d\n", loop_start, remain);
+			#if 1
+			f->error = clSetKernelArg(	t->kernel, 4, sizeof(int), 
+										(void*)&loop_start);		$CHECKERROR
+
+			f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernel,
+												t->dim, NULL, t->globalSize,
+												t->localSize, 0, NULL, &f->event);
+			$CHECKERROR
+			clFinish(f->command_queue);
+			t->totalKernel += profileThis(f->event);
+			#endif
+		break;
 	}
 
 	/* Divide by N if INVERSE */
@@ -116,6 +163,75 @@ void tope1DExec(	struct topeFFT *f,
 	$CHECKERROR
 	clFinish(f->command_queue);
 	t->totalMemory += profileThis(f->event);
+}
+
+void tope1DPlanInitDFT( 	struct topeFFT *f,
+							struct topePlan1D *t, int x)
+{
+	/* Twiddle Setup 
+	 * -------------
+	 * Dev: Note:
+	 * ---------
+	 * The size of the twiddle input is +1'd to allow calculation of the last 
+	 * twiddle. Eventually, the twiddle calculations would be /4 and recovered 
+	 * using the quad/buad technique from the radix kernels in the code.
+	 * For example, the last twiddle for input size 5 would be W^16. 
+	 */
+
+	int required = (x-1) * (x-1) +1; // Eventually reduce/4 !!!!!
+
+	t->twiddle = clCreateBuffer(f->context, CL_MEM_READ_WRITE,
+								sizeof(double)*2*required,
+								NULL, &f->error);
+	$CHECKERROR
+
+	t->kernel_twid = clCreateKernel(f->program1D, "twid1D", &f->error);
+	$CHECKERROR
+
+	f->error = clSetKernelArg(	t->kernel_twid, 0, sizeof(cl_mem), 
+								(void*)&t->twiddle);	$CHECKERROR
+	f->error = clSetKernelArg(	t->kernel_twid, 1, sizeof(int), 
+								(void*)&t->x);		$CHECKERROR
+
+	t->globalSize[0] = required;
+	if (required % 2 == 0) {
+		t->localSize[0] = required < 512 ? required : 2; 
+	}
+	else {
+		t->localSize[0] = required < 512 ? required : 1; 
+	}
+	f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernel_twid,
+										t->dim, NULL, t->globalSize,
+										t->localSize, 0, NULL, &f->event);
+	$CHECKERROR
+	clFinish(f->command_queue);
+	t->totalPreKernel += profileThis(f->event);
+
+	#if 0 // Debug Code
+	int i,j;
+	double d[required*2];
+	f->error = clEnqueueReadBuffer(	f->command_queue, t->twiddle,
+									CL_TRUE, 0, sizeof(double)*2*required, d, 
+									0, NULL, &f->event);
+	for (i = 0; i < t->x; i++) {
+		for (j = 0; j < t->x; j++) {
+			printf("%f\t%f\t%d\n", d[(2*i*j)], d[(2*i*j)+1], i*j);	
+		}
+	}
+	//exit(0);
+	#endif
+
+	
+	/* Kernel Setup */
+	t->kernel = clCreateKernel(f->program1D, "DFT", &f->error);
+	$CHECKERROR
+
+	f->error = clSetKernelArg(t->kernel, 0, sizeof(cl_mem), (void*)&t->data);
+	$CHECKERROR
+	f->error = clSetKernelArg(t->kernel, 1, sizeof(cl_mem), (void*)&t->twiddle);
+	$CHECKERROR
+	f->error = clSetKernelArg(t->kernel, 2, sizeof(int), (void*)&t->x);
+	$CHECKERROR
 }
 
 void tope1DPlanInitBase2(	struct topeFFT *f,
@@ -194,26 +310,25 @@ void tope1DPlanInit(struct topeFFT *f,
 	/* Some Simple Initializations */
 	t->totalMemory = t->totalKernel = t->totalPreKernel = 0;
 	t->x = x;			// size
-	t->log = log2(x);	// Log
 	t->type = type;		// C2C/R2C etc
 	t->dim = 1;			// Dimensions for kernel
 	t->globalSize = malloc(sizeof(size_t)*t->dim);	// Kernel indexing
 	t->localSize = malloc(sizeof(size_t)*t->dim);
 
+	/* Separates integer and decimal parts */
+	double re;
+	double fl = modf(log2(x),&re); 
+
 	/* Decide Radix */
-	if( t->log % 3==0 ) t->radix = 8;
-	else{	
-		if ( (t->log) % 2 == 0) t->radix = 4;
-		else {
-			if (x % 2 == 0) t->radix = 2;
-			else {
-				t->radix = -1;
-			}
-		}
-	}
-	if (t->radix == -1) {
-		printf("No algorithm for this input size\n");
-	 	exit(0);
+	if (!fl) {
+		t->log = log2(x);	// Log
+		if( t->log % 3==0 ) t->radix = 8;
+		else if ( (t->log) % 2 == 0) t->radix = 4;
+		else if (x % 2 == 0) t->radix = 2;
+		else t->radix = -1;
+ 	}
+	else {
+		t->radix = -1;
 	}
 
 	/* Memory Allocation */
@@ -225,16 +340,21 @@ void tope1DPlanInit(struct topeFFT *f,
 								sizeof(int)*x, NULL, &f->error);
 	$CHECKERROR
 
-	/* Swapping Kernel Setup*/
-	t->kernel_swap = clCreateKernel(f->program1D, "swap1D", &f->error);
-	clCreateKernelChecker(&f->error);
-	$CHECKERROR
-	f->error = clSetKernelArg(	t->kernel_swap,1,sizeof(cl_mem),
-								(void*)&t->bitrev); $CHECKERROR
+	if (t->radix > 0) {
+	/* Swapping Kernel Setup */
+		t->kernel_swap = clCreateKernel(f->program1D, "swap1D", &f->error);
+		clCreateKernelChecker(&f->error);
+		$CHECKERROR
+		f->error = clSetKernelArg(	t->kernel_swap,1,sizeof(cl_mem),
+									(void*)&t->bitrev); $CHECKERROR
+	}
 
 	/* Send Rest of Setup to Right Function s*/
 	if ((t->radix == 2 || t->radix == 4) || t->radix == 8) {
 		if (x > 2) tope1DPlanInitBase2(f,t,x);
+	}
+	if (t->radix == -1) {
+		tope1DPlanInitDFT(f,t,x);
 	}
 
 	/* Write Data */
@@ -246,10 +366,10 @@ void tope1DPlanInit(struct topeFFT *f,
 	t->totalMemory += profileThis(f->event);
 
 	/* Readjustments */
-	if(t->radix==8)
-		t->log=t->log/3;
-	if(t->radix==4)
-		t->log=t->log/2;
+	if (t->radix > 0) {
+		if(t->radix==8)			t->log=t->log/3;
+		if(t->radix==4)			t->log=t->log/2;
+	}
 }
 
 void tope1DDestroy(	struct topeFFT *f,
@@ -257,21 +377,36 @@ void tope1DDestroy(	struct topeFFT *f,
 {
 	if (t->x > 2) // Not initialized for under 2 
 	{
-		f->error = clFlush(f->command_queue);
-		f->error = clFinish(f->command_queue);
-		f->error = clReleaseKernel(t->kernel);
-		f->error = clReleaseKernel(t->kernel_bit);
-		f->error = clReleaseKernel(t->kernel_swap);
-		f->error = clReleaseKernel(t->kernel_twid);
-		f->error = clReleaseKernel(t->kernel_div);
-		f->error = clReleaseProgram(f->program1D);
-		f->error = clReleaseProgram(f->program2D);
-		f->error = clReleaseProgram(f->program3D);
-		f->error = clReleaseMemObject(t->data);
-		f->error = clReleaseMemObject(t->bitrev);
-		f->error = clReleaseMemObject(t->twiddle);
-		f->error = clReleaseCommandQueue(f->command_queue);
-		f->error = clReleaseContext(f->context);
+		if (t->radix > 0) {
+			f->error = clFlush(f->command_queue);
+			f->error = clFinish(f->command_queue);
+			f->error = clReleaseKernel(t->kernel);
+			f->error = clReleaseKernel(t->kernel_bit); 
+			f->error = clReleaseKernel(t->kernel_swap); 
+			f->error = clReleaseKernel(t->kernel_twid);
+			f->error = clReleaseKernel(t->kernel_div); 
+			f->error = clReleaseProgram(f->program1D);
+			f->error = clReleaseProgram(f->program2D);
+			f->error = clReleaseProgram(f->program3D);
+			f->error = clReleaseMemObject(t->data);
+			f->error = clReleaseMemObject(t->bitrev); 
+			f->error = clReleaseMemObject(t->twiddle); 
+			f->error = clReleaseCommandQueue(f->command_queue);
+			f->error = clReleaseContext(f->context);
+		}
+		else {
+			f->error = clFlush(f->command_queue);
+			f->error = clFinish(f->command_queue);
+			f->error = clReleaseKernel(t->kernel);
+			f->error = clReleaseKernel(t->kernel_twid);
+			f->error = clReleaseProgram(f->program1D);
+			f->error = clReleaseProgram(f->program2D);
+			f->error = clReleaseProgram(f->program3D);
+			f->error = clReleaseMemObject(t->data);
+			f->error = clReleaseMemObject(t->twiddle); 
+			f->error = clReleaseCommandQueue(f->command_queue);
+			f->error = clReleaseContext(f->context);
+		}
 	}
 }
 

@@ -15,7 +15,7 @@ topeFFT: $(REQ)
 	$(CC) $(CFLAGS) -c -o obj/checkers.o src/checkers.c $(LDFLAGS)
 	$(CC) -shared -Wl,-soname,libTopeFFT.so.1 -o lib/libTopeFFT.so.1.0 $(OBJ)
 	$(CC) $(CFLAGS) -o bin/topeFFT_cc src/topeFFT_cc.c $(LDFLAGS)
-	bin/topeFFT_cc
+	#bin/topeFFT_cc
 
 tests:
 	$(CC) $(CFLAGS) -lrt $(CUDAFLAGS) test/1d.c -o bin/1d $(LDTEST)

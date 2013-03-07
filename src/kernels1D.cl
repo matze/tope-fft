@@ -547,50 +547,28 @@ __kernel void reverse2(__global int *bitRev, int logSize)
 }
 
 __kernel void DFT(  	__global double *data,
-						__global double2 *twiddle,
+						__global double *scratch,
 						const int size, 
-						unsigned int dir,
-						const int loop_start)
+						unsigned int dir)
 {
 	int idX = get_global_id(0);
-	int idXN = idX+loop_start;
 	double2 TEMP = (double2)(0,0);
-	if (loop_start > 0) TEMP = (double2)(data[2*idX,2*idX+1]);
-	int remain = size - loop_start;
 	double2 W;
 
-	if (loop_start == 0) {
 	int i;
-	for(i = loop_start; i < (remain < 128 ? remain+loop_start : 128); i++) 
+	for (i = 0; i < size; i++) 
 	{
-		#if 1
-		W = (double2)( 	cos(CLPT*idXN*i/size),
-					   -sin(CLPT*idXN*i/size));
+		W = (double2)( 	cos(CLPT*idX*i/size),
+					   -sin(CLPT*idX*i/size));
 		TEMP.x += data[2*i] * W.x - data[2*i+1] * W.y;
 		TEMP.y += data[2*i] * W.y + data[2*i+1] * W.x;
-		#endif
-	   	#if 0
-		TEMP.x += data[2*i] * twiddle[idXN*i].x - data[2*i+1] * twiddle[idXN*i].y;
-		TEMP.y += data[2*i] * twiddle[idXN*i].y + data[2*i+1] * twiddle[idXN*i].x;
-		#endif
 	}
-	data[2*idX] 	= TEMP.x;
-	data[2*idX+1] 	= TEMP.y;
-	}
-	else {
-		W = (double2)( 	cos(CLPT*128.*128./size),
-					   -sin(CLPT*128.*128./size));
-		TEMP.x += data[2*128] * W.x - data[2*128+1] * W.y;
-		TEMP.y += data[2*128] * W.y + data[2*128+1] * W.x;
+	scratch[2*idX] 	 	= TEMP.x;
+	scratch[2*idX+1] 	= TEMP.y;
 
-		data[2*128] = TEMP.x;
-		data[2*128+1] = TEMP.y;
-	}
-
-	
 	#if 0 // Debug
-	data[2*idX] 	= idX;
-	data[2*idX+1] 	= W.y;
+	data[2*idX] 	= scratch[2*idX];
+	data[2*idX+1] 	= scratch[2*idX+1];
 	#endif
 }
 

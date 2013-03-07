@@ -23,6 +23,7 @@ struct topePlan1D {
 	cl_mem data;			// main data
 	cl_mem bitrev;			// bitreversal data
 	cl_mem twiddle;			// twiddles
+	cl_mem scratch;   		// Scratch space
 	size_t dataSize;		// size of data
 	cl_ulong totalMemory;		// profiling: mem transfers
 	cl_ulong totalPreKernel;	// profiling: before butterflies

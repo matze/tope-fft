@@ -83,7 +83,7 @@ void tope1DExec(	struct topeFFT *f,
 		t->localSize[0] = t->x < 512 ? t->x : t->x % 2 == 0 ? 2 : 1;
 	}
 
-	int x, remain, loop_start;
+	int x;
 
 	switch(t->radix)
 	{
@@ -114,33 +114,13 @@ void tope1DExec(	struct topeFFT *f,
 		}
 		break;
 		case -1: // DFT Case
-			remain = t->x; 
-			loop_start = 0;
-			f->error = clSetKernelArg(	t->kernel, 4, sizeof(int), 
-										(void*)&loop_start);		$CHECKERROR
-
-			f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernel,
-												t->dim, NULL, t->globalSize,
-												t->localSize, 0, NULL, &f->event);
-			$CHECKERROR
+			f->error = clEnqueueNDRangeKernel(	
+									f->command_queue, t->kernel,
+									t->dim, NULL, t->globalSize,
+									t->localSize, 0, NULL, &f->event);
+									$CHECKERROR
 			clFinish(f->command_queue);
 			t->totalKernel += profileThis(f->event);
-			if (remain > 128) remain = (remain-loop_start) % 128;
-			
-			/* Put following in loop */
-			loop_start = t->x-remain;
-			printf("%d and %d\n", loop_start, remain);
-			#if 1
-			f->error = clSetKernelArg(	t->kernel, 4, sizeof(int), 
-										(void*)&loop_start);		$CHECKERROR
-
-			f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernel,
-												t->dim, NULL, t->globalSize,
-												t->localSize, 0, NULL, &f->event);
-			$CHECKERROR
-			clFinish(f->command_queue);
-			t->totalKernel += profileThis(f->event);
-			#endif
 		break;
 	}
 
@@ -157,7 +137,7 @@ void tope1DExec(	struct topeFFT *f,
 	}
 
 	/* Read Data Again */
-	f->error = clEnqueueReadBuffer(	f->command_queue, t->data,
+	f->error = clEnqueueReadBuffer(	f->command_queue, t->scratch,
 									CL_TRUE, 0, t->dataSize, d, 
 									0, NULL, &f->event);
 	$CHECKERROR
@@ -175,9 +155,13 @@ void tope1DPlanInitDFT( 	struct topeFFT *f,
 	 * The size of the twiddle input is +1'd to allow calculation of the last 
 	 * twiddle. Eventually, the twiddle calculations would be /4 and recovered 
 	 * using the quad/buad technique from the radix kernels in the code.
-	 * For example, the last twiddle for input size 5 would be W^16. 
+	 * For example, the last twiddle for input size 5 would be W^16.
+	 *
+	 * Also, if twiddles are calculated on the fly, the twiddle code in this
+	 * section is redundant.
 	 */
 
+	#if 0
 	int required = (x-1) * (x-1) +1; // Eventually reduce/4 !!!!!
 
 	t->twiddle = clCreateBuffer(f->context, CL_MEM_READ_WRITE,
@@ -193,12 +177,12 @@ void tope1DPlanInitDFT( 	struct topeFFT *f,
 	f->error = clSetKernelArg(	t->kernel_twid, 1, sizeof(int), 
 								(void*)&t->x);		$CHECKERROR
 
-	t->globalSize[0] = required;
+	t->globalSize[0] = 512;//required;
 	if (required % 2 == 0) {
-		t->localSize[0] = required < 512 ? required : 2; 
+		t->localSize[0] = 32;//required < 512 ? required : 2; 
 	}
 	else {
-		t->localSize[0] = required < 512 ? required : 1; 
+		t->localSize[0] = 1;//required < 512 ? required : 1; 
 	}
 	f->error = clEnqueueNDRangeKernel(	f->command_queue, t->kernel_twid,
 										t->dim, NULL, t->globalSize,
@@ -206,6 +190,7 @@ void tope1DPlanInitDFT( 	struct topeFFT *f,
 	$CHECKERROR
 	clFinish(f->command_queue);
 	t->totalPreKernel += profileThis(f->event);
+	#endif
 
 	#if 0 // Debug Code
 	int i,j;
@@ -221,14 +206,26 @@ void tope1DPlanInitDFT( 	struct topeFFT *f,
 	//exit(0);
 	#endif
 
-	
+	/* Create Scratch Space
+	 * ---------------------
+	 *  This space is required because OpenCL is giving problems in long roops
+	 *  and therefore in order to break up the loops into chunks, we need to
+	 *  store the multiplye-and-adds in temporary storge (so the original data
+	 *  is not touched)
+	 *
+	 *  Update: It had nothing to do with long loops !!!! hahaha
+	 */
+	t->scratch = clCreateBuffer(f->context, CL_MEM_READ_WRITE,
+								sizeof(double)*2*t->x,
+								NULL, &f->error); 			$CHECKERROR
+
 	/* Kernel Setup */
 	t->kernel = clCreateKernel(f->program1D, "DFT", &f->error);
 	$CHECKERROR
 
 	f->error = clSetKernelArg(t->kernel, 0, sizeof(cl_mem), (void*)&t->data);
 	$CHECKERROR
-	f->error = clSetKernelArg(t->kernel, 1, sizeof(cl_mem), (void*)&t->twiddle);
+	f->error = clSetKernelArg(t->kernel, 1, sizeof(cl_mem), (void*)&t->scratch);
 	$CHECKERROR
 	f->error = clSetKernelArg(t->kernel, 2, sizeof(int), (void*)&t->x);
 	$CHECKERROR
@@ -398,12 +395,11 @@ void tope1DDestroy(	struct topeFFT *f,
 			f->error = clFlush(f->command_queue);
 			f->error = clFinish(f->command_queue);
 			f->error = clReleaseKernel(t->kernel);
-			f->error = clReleaseKernel(t->kernel_twid);
 			f->error = clReleaseProgram(f->program1D);
 			f->error = clReleaseProgram(f->program2D);
 			f->error = clReleaseProgram(f->program3D);
 			f->error = clReleaseMemObject(t->data);
-			f->error = clReleaseMemObject(t->twiddle); 
+			f->error = clReleaseMemObject(t->scratch);
 			f->error = clReleaseCommandQueue(f->command_queue);
 			f->error = clReleaseContext(f->context);
 		}

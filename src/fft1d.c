@@ -8,6 +8,7 @@
 #define TOPEFFT_H
 #include "topefft.h"
 #endif
+#include "checkers.h"
 
 void tope1DExec(	struct topeFFT *f,
 					struct topePlan1D *t, 

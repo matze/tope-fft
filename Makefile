@@ -1,6 +1,6 @@
 CFLAGS += -Wall -fPIC -O2
 
-LIB_SRC = src/util.c src/fft1d.c src/fft3d.c src/fft2d.c
+LIB_SRC = src/util.c src/fft1d.c src/fft3d.c src/fft2d.c src/checkers.c
 LIB_OBJ = $(patsubst %.c,%.o,$(LIB_SRC))
 LIB_BASE = topefft
 LIB_NAME = lib$(LIB_BASE).so
@@ -22,8 +22,8 @@ all: $(BIN)
 $(LIB): $(LIB_OBJ)
 	@echo " LD $@"
 	@$(CC) -shared -Wl,-soname,$(SONAME) -o $@ $(OBJ) -o $@ $(LIB_LDFLAGS)
-	ln -s $(LIB) $(LIB_SONAME)
-	ln -s $(LIB_SONAME) $(LIB_NAME)
+	ln -sf $(LIB) $(LIB_SONAME)
+	ln -sf $(LIB_SONAME) $(LIB_NAME)
 
 $(BIN): $(LIB) $(BIN_OBJ)
 	@echo " LD $@"

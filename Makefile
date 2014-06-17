@@ -1,43 +1,33 @@
-CC = gcc
-CFLAGS = -Wall -fPIC -O2 
-LDFLAGS = -lOpenCL -lm -I/usr/local/cuda/include -g -pg
-LDTEST = -lfftw3 -lOpenCL -lTopeFFT -L/opt/topefft -g -pg
-CUDAFLAGS = -I/usr/local/cuda/include -L/usr/local/cuda/lib64 -lcuda -lcudart -lcufft
+CFLAGS += -Wall -fPIC -O2
 
-REQ = src/util.c src/fft1d.c src/fft3d.c src/fft2d.c src/checkers.c 
-OBJ = obj/util.o obj/fft1d.o obj/fft3d.o obj/fft2d.o obj/checkers.o
+LIB_SRC = src/util.c src/fft1d.c src/fft3d.c src/fft2d.c
+LIB_OBJ = $(patsubst %.c,%.o,$(LIB_SRC))
+LIB_BASE = topefft
+LIB_NAME = lib$(LIB_BASE).so
+LIB_SONAME = $(LIB_NAME).1
+LIB = $(LIB_SONAME).0
+LIB_LDFLAGS = $(LDFLAGS) -lOpenCL -lm
 
-topeFFT: $(REQ)
-	$(CC) $(CFLAGS) -c -o obj/util.o src/util.c $(LDFLAGS) 
-	$(CC) $(CFLAGS) -c -o obj/fft1d.o src/fft1d.c $(LDFLAGS)
-	$(CC) $(CFLAGS) -c -o obj/fft2d.o src/fft2d.c $(LDFLAGS)
-	$(CC) $(CFLAGS) -c -o obj/fft3d.o src/fft3d.c $(LDFLAGS)
-	$(CC) $(CFLAGS) -c -o obj/checkers.o src/checkers.c $(LDFLAGS)
-	$(CC) -shared -Wl,-soname,libTopeFFT.so.1 -o lib/libTopeFFT.so.1.0 $(OBJ)
-	$(CC) $(CFLAGS) -o bin/topeFFT_cc src/topeFFT_cc.c $(LDFLAGS)
-	#bin/topeFFT_cc
+BIN_SRC = src/topeFFT_cc.c
+BIN_OBJ = $(patsubst %.c,%.o,$(BIN_SRC))
+BIN = topeFFT_cc
+BIN_LDFLAGS = $(LIB_LDFLAGS) -L. -l$(LIB_BASE)
 
-tests:
-	$(CC) $(CFLAGS) -lrt $(CUDAFLAGS) test/1d.c -o bin/1d $(LDTEST)
-	$(CC) $(CFLAGS) -lrt $(CUDAFLAGS) test/2d.c -o bin/2d $(LDTEST) 
-	$(CC) $(CFLAGS) -lrt $(CUDAFLAGS) test/3d.c -o bin/3d $(LDTEST) 
+all: $(BIN)
 
-install:
-	mkdir -p /opt/topefft
-	cp src/kernels* /opt/topefft
-	cp lib/libTopeFFT.so.1.0 /opt/topefft/libTopeFFT.so.1.0
-	ln -sf /opt/topefft/libTopeFFT.so.1.0 /opt/topefft/libTopeFFT.so.1
-	ln -sf /opt/topefft/libTopeFFT.so.1.0 /opt/topefft/libTopeFFT.so
+%.o: %.c
+	@echo " CC $@"
+	@$(CC) -c $(CFLAGS) -o $@ $<
+
+$(LIB): $(LIB_OBJ)
+	@echo " LD $@"
+	@$(CC) -shared -Wl,-soname,$(SONAME) -o $@ $(OBJ) -o $@ $(LIB_LDFLAGS)
+	ln -s $(LIB) $(LIB_SONAME)
+	ln -s $(LIB_SONAME) $(LIB_NAME)
+
+$(BIN): $(LIB) $(BIN_OBJ)
+	@echo " LD $@"
+	@$(CC) $(BIN_OBJ) -o $@ $(BIN_LDFLAGS)
 
 clean:
-	@rm -f obj/*.o
-	@rm -f bin/*
-	@rm -f a.out
-	@rm -f .sw*
-	@rm -f .*sw*
-	@rm -f src/.sw*
-	@rm -f src/kern*.ptx
-	
-
-
-
+	@rm -f $(BIN_OBJ) $(LIB_OBJ) $(BIN) $(LIB_NAME) $(LIB_SONAME) $(LIB)

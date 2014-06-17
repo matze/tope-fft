@@ -1,9 +1,15 @@
 #include <CL/cl.h>
+
+#ifdef DEBUG
 #include <assert.h>
+#define $CHECKERROR assert (f->error == CL_SUCCESS);
+#else
+#include <stdio.h>
+#define $CHECKERROR if (f->error != CL_SUCCESS) fprintf(stderr, "OpenCL error: %i\n", f->error);
+#endif
 
 #define MAX_BINARY_SIZE (0x100000) // Eq: 1Mb
 #define MAX_SOURCE_SIZE (0x100000) // Eq: 1Mb
-#define $CHECKERROR assert (f->error == CL_SUCCESS);	
 
 #define C2C 1
 #define R2C 0

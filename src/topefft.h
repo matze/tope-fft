@@ -102,3 +102,6 @@ struct topeFFT {
 
 cl_ulong profileThis(cl_event);
 
+void tope1DPlanInit(struct topeFFT *f, struct topePlan1D *t, int x, int type, double *d);
+void tope1DExec(struct topeFFT *f, struct topePlan1D *t, double *d, int dir);
+

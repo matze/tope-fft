@@ -21,7 +21,7 @@ all: $(BIN)
 
 $(LIB): $(LIB_OBJ)
 	@echo " LD $@"
-	@$(CC) -shared -Wl,-soname,$(SONAME) -o $@ $(OBJ) -o $@ $(LIB_LDFLAGS)
+	@$(CC) -shared -Wl,-soname,$(SONAME) -o $@ $(LIB_OBJ) -o $@ $(LIB_LDFLAGS)
 	ln -sf $(LIB) $(LIB_SONAME)
 	ln -sf $(LIB_SONAME) $(LIB_NAME)
 
